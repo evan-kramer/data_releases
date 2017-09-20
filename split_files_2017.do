@@ -23,7 +23,7 @@ local base = 0
 local acts = 0
 local chra = 0
 
-local stu = 1
+local stu = 0
 local dis = 0
 local sch = 0
 local sca = 0
@@ -141,27 +141,8 @@ if `sca' == 1 {
 * ELPA files
 if `elp' == 1 {
 	
-}
-* ACT files
-if `act' == 1 {
-
-}
-* AMO files
-if `amo' == 1 {
-
-}
-* Chronic absenteeism files
-if `abs' == 1 {
-
-}
-* Soft release
-* CORE regional files
-* File checks
-exit
-
-
-* ELPA student level
-if `elpa' == 1 {
+	
+	* Student level
 	import delimited using "K:/ORP_accountability/projects/Jessica/Data Returns/Data/WIDA/WIDA_student_level2017_formatted.csv", clear
 	la var drcrecordid "DRC Record ID"
 	la var reportedrecord "Reported Record" 
@@ -340,19 +321,20 @@ if `elpa' == 1 {
 		restore
 	}
 }
+* ACT files
+if `act' == 1 {
 
-* Base with second worksheet for state release
-if `base' == 1 {
-	
 }
+* AMO files
+if `amo' == 1 {
 
-* ACT substitution student level
-if `acts' == 1 {
-	
 }
-
-* Chronic absenteeism student level
-if `chra' == 1 {
+* Chronic absenteeism files
+if `abs' == 1 {
+	* District level
+	* School level
+	
+	* Student level
 	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/student_chronic_absenteeism.csv", clear
 	
 	* List of distinct systems
@@ -365,3 +347,6 @@ if `chra' == 1 {
 		restore
 	}
 }
+* Soft release
+* CORE regional files
+* File checks

@@ -24,6 +24,14 @@ local acts = 0
 local chra = 0
 
 local stu = 1
+local dis = 0
+local sch = 0
+local sca = 0
+local elp = 0
+local act = 0
+local sof = 0
+local cor = 0
+local che = 0
 
 * Student level files
 if `stu' == 1 {
@@ -58,8 +66,14 @@ if `stu' == 1 {
 
 * District accountability files
 if `dis' == 1 {
+	* Remove all previous files
+	cd "$output/District Accountability Files"
+	!del *.csv
+	!del *.xlsx
+	
 	* Base with multiple worksheets
 	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/system_base_2017_aug24.csv", clear
+	gsort system
 	levelsof system, local(sys_list)
 	
 	foreach s in `sys_list' {
@@ -103,39 +117,48 @@ if `dis' == 1 {
 	}
 	
 	* Numeric
-	
-}
-
-* School level files
-* School accountability files
-* ELPA files
-* ACT files
-* AMO files
-* Chronic absenteeism files
-
-
-
-
-
-
-
-
-exit
-
-* TCAP student level
-if `tcap' == 1 {
-	use "K:/ORP_accountability/projects/2017_student_level_file/state_student_level_2017_JP_final.dta", clear
-
-	* List of distinct systems
+	import delimited using "$input/system_numeric_2017_JW_Sep08.csv", clear
+	gsort system 
 	levelsof system, local(sys_list)
-
+	
+	** Output files
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export delimited using "$output/Student Level Files/`s'_StudentLevelFiles_$date.csv", replace
+		export excel using "$output/District Accountability Files/`s'_DistrictNumericFile_$date.xlsx", replace 
 		restore
 	}
 }
+
+* School level files
+if `sch' == 1 {
+
+}
+* School accountability files
+if `sca' == 1 {
+	
+}
+* ELPA files
+if `elp' == 1 {
+	
+}
+* ACT files
+if `act' == 1 {
+
+}
+* AMO files
+if `amo' == 1 {
+
+}
+* Chronic absenteeism files
+if `abs' == 1 {
+
+}
+* Soft release
+* CORE regional files
+* File checks
+exit
+
 
 * ELPA student level
 if `elpa' == 1 {

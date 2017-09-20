@@ -57,6 +57,55 @@ if `stu' == 1 {
 }
 
 * District accountability files
+if `dis' == 1 {
+	* Base with multiple worksheets
+	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/system_base_2017_aug24.csv", clear
+	levelsof system, local(sys_list)
+	
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export excel using "$output/District Accountability Files/`s'_DistrictBaseFile_$date.xlsx", replace firstrow(varlabels) sheet("District Base File")
+		restore
+	}
+	
+	** Suppress state release
+	import excel using "K:/ORP_accountability/projects/2017_district_release/system_results_2017.xlsx", firstrow clear
+	foreach v in Below Approaching OnTrack Mastered {
+		foreach l in Number Percent {
+			replace `l'`v' = . if ValidTests < 10
+			la var `l'`v' "`l' `v'"
+		}
+		replace Percent`v' = . if Percent`v' > 99 | Percent`v' < 1
+		replace Number`v'  = . if Number`v' / ValidTests > .99 | Number`v' / ValidTests < .01
+	}
+	replace PercentOnTrackMastered = . if PercentOnTrackMastered > 99 | PercentOnTrackMastered < 1
+	foreach v in OnTrack Below {
+		replace ChangeinPercent`v' = . if ValidTests < 10
+	}
+	
+	** Output files
+	la var SystemName "System Name"
+	la var ValidTests "Valid Tests"
+	la var NumberOnTrack "Number On Track"
+	la var PercentOnTrack "Percent On Track"
+	la var PercentOnTrackMastered "Percent On Track Mastered"
+	la var ChangeinPercentOnTrack "Change in Percent On Track"
+	la var ChangeinPercentBelow "Change in Percent Below"
+		
+	levelsof System, local(sys_list)
+
+	foreach s in `sys_list' {
+		preserve
+		keep if System == `s'
+		export excel using "$output/District Accountability Files/`s'_DistrictBaseFile_$date.xlsx", firstrow(varlabels) sheet("Public Release Data") 
+		restore
+	}
+	
+	* Numeric
+	
+}
+
 * School level files
 * School accountability files
 * ELPA files
@@ -271,49 +320,7 @@ if `elpa' == 1 {
 
 * Base with second worksheet for state release
 if `base' == 1 {
-	* Base file
-	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/system_base_2017_aug24.csv", clear
-	levelsof system, local(sys_list)
 	
-	foreach s in `sys_list' {
-		preserve
-		keep if system == `s'
-		export excel using "$output/District Accountability Files/`s'_DistrictBaseFile_$date.xlsx", replace firstrow(varlabels) sheet("District Base File")
-		restore
-	}
-	
-	* Suppress state release
-	import excel using "K:/ORP_accountability/projects/2017_district_release/system_results_2017.xlsx", firstrow clear
-	foreach v in Below Approaching OnTrack Mastered {
-		foreach l in Number Percent {
-			replace `l'`v' = . if ValidTests < 10
-			la var `l'`v' "`l' `v'"
-		}
-		replace Percent`v' = . if Percent`v' > 99 | Percent`v' < 1
-		replace Number`v'  = . if Number`v' / ValidTests > .99 | Number`v' / ValidTests < .01
-	}
-	replace PercentOnTrackMastered = . if PercentOnTrackMastered > 99 | PercentOnTrackMastered < 1
-	foreach v in OnTrack Below {
-		replace ChangeinPercent`v' = . if ValidTests < 10
-	}
-	
-	* Output files
-	la var SystemName "System Name"
-	la var ValidTests "Valid Tests"
-	la var NumberOnTrack "Number On Track"
-	la var PercentOnTrack "Percent On Track"
-	la var PercentOnTrackMastered "Percent On Track Mastered"
-	la var ChangeinPercentOnTrack "Change in Percent On Track"
-	la var ChangeinPercentBelow "Change in Percent Below"
-		
-	levelsof System, local(sys_list)
-
-	foreach s in `sys_list' {
-		preserve
-		keep if System == `s'
-		export excel using "$output/District Accountability Files/`s'_DistrictBaseFile_$date.xlsx", firstrow(varlabels) sheet("Public Release Data") 
-		restore
-	}
 }
 
 * ACT substitution student level

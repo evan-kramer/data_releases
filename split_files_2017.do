@@ -25,6 +25,7 @@ local chra = 0
 
 local stu = 1
 
+* Student level files
 if `stu' == 1 {
 	* Remove all previous files
 	cd "$output/Student Level Files"
@@ -55,6 +56,13 @@ if `stu' == 1 {
 	}
 }
 
+* District accountability files
+* School level files
+* School accountability files
+* ELPA files
+* ACT files
+* AMO files
+* Chronic absenteeism files
 
 
 

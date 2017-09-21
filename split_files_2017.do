@@ -17,20 +17,16 @@ global input "K:/ORP_accountability/data/2017_final_accountability_files"
 global output "K:/ORP_accountability/data/2017_final_accountability_files/Accountability Application"
 global date = subinstr(c(current_date), " ", "", 3)
 
-local tcap = 0
-local elpa = 0
-local base = 0
-local acts = 0
-local chra = 0
-
 local stu = 0
 local dis = 0
 local sch = 0
 local sca = 0
 local elp = 0
 local act = 0
+local amo = 0
+local abs = 0
 local sof = 0
-local cor = 0
+local cor = 1
 local che = 0
 
 * Student level files
@@ -72,7 +68,7 @@ if `dis' == 1 {
 	!del *.xlsx
 	
 	* Base with multiple worksheets
-	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/system_base_2017_aug24.csv", clear
+	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/system_base_2017_JW.csv", clear
 	gsort system
 	levelsof system, local(sys_list)
 	
@@ -107,6 +103,7 @@ if `dis' == 1 {
 	la var ChangeinPercentOnTrack "Change in Percent On Track"
 	la var ChangeinPercentBelow "Change in Percent Below"
 		
+	gsort System
 	levelsof System, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -128,19 +125,64 @@ if `dis' == 1 {
 		export excel using "$output/District Accountability Files/`s'_DistrictNumericFile_$date.xlsx", replace 
 		restore
 	}
+	
+	* Heat map files
 }
 
 * School level files
 if `sch' == 1 {
+	* Remove all previous files
+	cd "$output/School Level Files"
+	!del *.csv
+	!del *.xlsx
+	
+	* School base
+	import delimited using "$input/school_base_2017_JW.csv", clear
+	gsort system
+	levelsof system, local(sys_list)
 
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export excel using "$output/School Level Files/`s'_SchoolBaseFile_$date.xlsx", replace firstrow(varlabels)
+		restore
+	}
+		
+	* School numeric
+	import delimited using "$input/school_numeric_2017_JW.csv", clear
+	gsort system
+	levelsof system, local(sys_list)
+
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export excel using "$output/School Level Files/`s'_SchoolNumericFile_$date.xlsx", replace firstrow(varlabels)
+		restore
+	}
 }
 * School accountability files
 if `sca' == 1 {
+	* Remove all previous files
+	cd "$output/School Accountability Files"
+	!del *.csv
+	!del *.xlsx
 	
+	* School accountability file
+	* Data summary
+	* Reward school file
+	* Priority exit and improving file
+	* Focus exit and improving file
+	* School accountability lists
 }
 * ELPA files
 if `elp' == 1 {
+	* Remove all previous files
+	cd "$output/ELPA Files"
+	!del *.csv
+	!del *.xlsx
 	
+	* District level
+	* School level
 	
 	* Student level
 	import delimited using "K:/ORP_accountability/projects/Jessica/Data Returns/Data/WIDA/WIDA_student_level2017_formatted.csv", clear
@@ -323,21 +365,62 @@ if `elp' == 1 {
 }
 * ACT files
 if `act' == 1 {
-
+	* Remove all previous files
+	cd "$output/ACT Files"
+	!del *.csv
+	!del *.xlsx
+	
+	* District level
+	* School level
+	* Student level
+	* District retake
+	* School retake
+	* Student retake
 }
 * AMO files
 if `amo' == 1 {
-
+	* Remove all previous files
+	cd "$output/AMO Files"
+	!del *.csv
+	!del *.xlsx
+	
+	* District level
+	* School level
 }
 * Chronic absenteeism files
 if `abs' == 1 {
+	* Remove all previous files
+	cd "$output/Chronic Absenteeism Files"
+	!del *.csv
+	!del *.xlsx
+	
 	* District level
+	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/system_chronic_absenteeism.csv", clear
+	gsort system
+	levelsof system, local(sys_list)
+
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "$output/Chronic Absenteeism/`s'_ChronicAbsenteeismDistrictFile_$date.csv", replace
+		restore
+	}
+	
 	* School level
+	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/school_chronic_absenteeism.csv", clear
+	gsort system
+	levelsof system, local(sys_list)
+
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "$output/Chronic Absenteeism/`s'_ChronicAbsenteeismSchoolFile_$date.csv", replace
+		restore
+	}
 	
 	* Student level
 	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/student_chronic_absenteeism.csv", clear
-	
-	* List of distinct systems
+	gsort system
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -347,6 +430,115 @@ if `abs' == 1 {
 		restore
 	}
 }
+
 * Soft release
+if `sof' == 1 {
+	
+}
+
 * CORE regional files
+if `cor' == 1 {
+	cd "K:/ORP_accountability/projects/Evan/Data Releases"
+	!del *CORE*.csv
+	
+	* Base with multiple worksheets
+	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/system_base_2017_JW.csv", clear
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk.dta"
+	drop _merge system_namefinal analyst email director
+	
+	gsort region
+	levelsof region, local(core_list)
+	
+	foreach r in `core_list' {
+		preserve
+		keep if region == "`r'"
+		export excel using "`r'_Base.xlsx", replace firstrow(varlabels) sheet("District Base File")
+		restore
+	}
+	
+	** Suppress state release
+	/*
+	import excel using "K:/ORP_accountability/projects/2017_district_release/system_results_2017.xlsx", firstrow clear
+	mmerge System using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk.dta", umatch(system)
+	drop _merge system_name analyst email director
+	
+	foreach v in Below Approaching OnTrack Mastered {
+		foreach l in Number Percent {
+			replace `l'`v' = . if ValidTests < 10
+			la var `l'`v' "`l' `v'"
+		}
+		replace Percent`v' = . if Percent`v' > 99 | Percent`v' < 1
+		replace Number`v'  = . if Number`v' / ValidTests > .99 | Number`v' / ValidTests < .01
+	}
+	replace PercentOnTrackMastered = . if PercentOnTrackMastered > 99 | PercentOnTrackMastered < 1
+	foreach v in OnTrack Below {
+		replace ChangeinPercent`v' = . if ValidTests < 10
+	}
+	
+	** Output files
+	la var SystemName "System Name"
+	la var ValidTests "Valid Tests"
+	la var NumberOnTrack "Number On Track"
+	la var PercentOnTrack "Percent On Track"
+	la var PercentOnTrackMastered "Percent On Track Mastered"
+	la var ChangeinPercentOnTrack "Change in Percent On Track"
+	la var ChangeinPercentBelow "Change in Percent Below"
+	*/
+	
+	/*
+	gsort region
+	levelsof region, local(core_list)
+
+	foreach r in `core_list' {
+		preserve
+		keep if region == "`r'"
+		export excel using "`r'_Base.xlsx", firstrow(varlabels) sheet("Public Release Data") 
+		restore
+	}
+	*/
+	
+	
+	* Numeric
+	import delimited using "$input/system_numeric_2017_JW_Sep08.csv", clear
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk.dta"
+	drop _merge system_namefinal analyst email director
+
+	gsort region
+	levelsof region, local(core_list)
+	
+	** Output files
+	foreach r in `sys_list' {
+		preserve
+		keep if region == "`r'"
+		export excel using "`r'_Numeric.xlsx", replace 
+		restore
+	}
+	
+	* Aggregate
+	import delimited using "$input/system_base_2017_JW.csv", clear
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk.dta"
+		
+	collapse (sum) enrolled* tested* valid_tests n_* grad_c*, by(year subject grade subgroup region)
+		
+	foreach v in _below_bsc _approach_bsc _ontrack_prof _mastered_adv _21_orhigher _below19 {
+		gen pct`v' = round(100 * n`v' / valid_tests, 0.1) if !inlist(valid_tests, ., 0), after(n`v') 
+	}
+	egen part_num = rowtotal(tested*)
+	egen part_denom = rowtotal(enrolled*)
+	gen grad_rate = round(100 * grad_count / grad_cohort, 0.1) if !inlist(grad_cohort, ., 0), after(grad_count)
+	gen participation_rate = round(100 * part_num / part_denom, 1), after(grad_count)
+		
+	gsort region subject grade subgroup -year
+	levelsof region, local(core_list)
+	foreach r in `core_list' {
+		preserve
+		keep if region == "`r'"
+		export delimited using "`r'_Aggregate.csv", replace 
+		restore
+	}
+}
+
 * File checks
+if `che' == 1 {
+
+}

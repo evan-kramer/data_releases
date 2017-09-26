@@ -35,7 +35,7 @@ local chronic_district = "system_chronic_absenteeism.csv"
 local chronic_school = "school_chronic_absenteeism.csv"
 
 ** Flags
-local stu = 0
+local stu = 1
 local dis = 0
 local sch = 0
 local sca = 0
@@ -566,5 +566,25 @@ if `cor' == 1 {
 
 * File checks
 if `che' == 1 {
-
+	* Upload test
+	import excel using "K:/ORP_accountability/projects/Evan/Change Requests/FileUploader List.xlsm", clear firstrow
+	replace A = A[_n-1] if A == ""
+	drop if _n > 33
+	replace FileName = subinstr(FileName, "###", "", 1)
+	replace FileName = subinstr(FileName, "<", "10", 1)
+	replace FileName = subinstr(FileName, ">", "", 1)
+	replace FileName = subinstr(FileName, "Date", "$date", 1)
+	levelsof FileName, local(file_list)
+	
+	foreach f of numlist 1/30 {
+		preserve
+		keep if _n == `f' 
+		levelsof FileName, local(fname)
+		if regexm(FileName, ".csv") == 1 {
+			export delimited using "H:/Common03/WEBPAGES/NCLBAppeals/Accountability Web Files/`fname'", replace
+		} 
+		else {
+			export excel using "H:/Common03/WEBPAGES/NCLBAppeals/Accountability Web Files/`fname'", replace firstrow(var)
+		}
+	}
 }

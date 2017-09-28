@@ -35,9 +35,9 @@ global chronic_district = "system_chronic_absenteeism.csv"
 global chronic_school = "school_chronic_absenteeism.csv"
 
 ** Flags
-local stu = 1
+local stu = 0
 local dis = 0
-local sch = 0
+local sch = 1
 local sca = 0
 local elp = 0
 local act = 0

@@ -20,13 +20,13 @@ global date = subinstr(c(current_date), " ", "", 3)
 ** Master files
 global student_level = "state_student_level_2017_JP_final_09252017.dta"
 global act_sub_student_level = "student_level_act_substitution.csv"
-global district_base = "system_base_2017_sep26.csv"
-global state_release = "system_results_2017.xlsx"
-global district_numeric = "system_numeric_2017_sep26.csv"
+global district_base = "system_base_2017_sep27.csv"
+global district_release = "system_release_2017_JW_09262017_formatted.xlsx"
+global district_numeric = "system_numeric_2017_sep27.csv"
 global heat_map = ""
-global school_release = "school_results_2017.xlsx"
-global school_base = "school_base_2017_sep26.csv"
-global school_numeric = "school_numeric_2017_sep26.csv"
+global school_release = "school_release_2017_JW_09262017_formatted.xlsx"
+global school_base = "school_base_2017_sep27.csv"
+global school_numeric = "school_numeric_2017_sep27.csv"
 global wida_student = "WIDA_student_level2017_formatted.csv"
 global wida_district = ""
 global wida_school = ""
@@ -36,11 +36,11 @@ global chronic_school = "school_chronic_absenteeism.csv"
 
 ** Flags
 local stu = 0
-local dis = 0
+local dis = 1
 local sch = 0
 local sca = 0
 local elp = 0
-local act = 1
+local act = 0
 local amo = 0
 local abs = 0
 local sof = 0
@@ -86,35 +86,31 @@ if `dis' == 1 {
 	}
 	
 	** Suppress state release
-	import excel using "K:/ORP_accountability/projects/2017_district_release/$state_release", firstrow clear
-	foreach v in Below Approaching OnTrack Mastered {
-		foreach l in Number Percent {
-			replace `l'`v' = . if ValidTests < 10
-			la var `l'`v' "`l' `v'"
+	import excel using "$input/$district_release", firstrow clear
+	rename (n_below_bsc n_approach_bsc n_ontrack_prof n_mastered_adv n_ontrack_mastered ///
+		pct_below_bsc pct_approach_bsc pct_ontrack_prof pct_mastered_adv pct_ontrack_prof_adv ///
+		pct_below_change pct_ontrack_mastered_change) ///
+		(n_below n_approaching n_on_track n_mastered n_on_mastered pct_below ///
+		pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
+	
+	foreach v in below approaching on_track mastered on_mastered {
+		foreach l in n_ pct_ {
+			replace `l'`v' = . if valid_tests < 10
 		}
-		replace Percent`v' = . if Percent`v' > 99 | Percent`v' < 1
-		replace Number`v'  = . if Number`v' / ValidTests > .99 | Number`v' / ValidTests < .01
-	}
-	replace PercentOnTrackMastered = . if PercentOnTrackMastered > 99 | PercentOnTrackMastered < 1
-	foreach v in OnTrack Below {
-		replace ChangeinPercent`v' = . if ValidTests < 10
+		replace pct_`v' = . if pct_`v' > 99 | pct_`v' < 1
+		replace n_`v' = . if n_`v' / valid_tests > .99 | n_`v' / valid_tests < .01
 	}
 	
-	** Output files
-	la var SystemName "System Name"
-	la var ValidTests "Valid Tests"
-	la var NumberOnTrack "Number On Track"
-	la var PercentOnTrack "Percent On Track"
-	la var PercentOnTrackMastered "Percent On Track Mastered"
-	la var ChangeinPercentOnTrack "Change in Percent On Track"
-	la var ChangeinPercentBelow "Change in Percent Below"
-		
-	gsort System
-	levelsof System, local(sys_list)
+	foreach v in below on_mastered {
+		replace change_in_pct_`v' = . if valid_tests < 10
+	}
+			
+	gsort system
+	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
 		preserve
-		keep if System == `s'
+		keep if system == `s'
 		export excel using "$output/District Accountability Files/`s'_DistrictBaseFile_$date.xlsx", firstrow(varlabels) sheet("Public Release Data") 
 		restore
 	}
@@ -154,6 +150,36 @@ if `sch' == 1 {
 		restore
 	}
 		
+	** Suppress state release
+	import excel using "$input/$school_release", firstrow clear
+		rename (n_below_bsc n_approach_bsc n_ontrack_prof n_mastered_adv n_ontrack_mastered ///
+		pct_below_bsc pct_approach_bsc pct_ontrack_prof pct_mastered_adv pct_ontrack_prof_adv ///
+		pct_below_change pct_ontrack_mastered_change) ///
+		(n_below n_approaching n_on_track n_mastered n_on_mastered pct_below ///
+		pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
+	
+	foreach v in below approaching on_track mastered on_mastered {
+		foreach l in n_ pct_ {
+			replace `l'`v' = . if valid_tests < 10
+		}
+		replace pct_`v' = . if pct_`v' > 99 | pct_`v' < 1
+		replace n_`v' = . if n_`v' / valid_tests > .99 | n_`v' / valid_tests < .01
+	}
+	
+	foreach v in below on_mastered {
+		replace change_in_pct_`v' = . if valid_tests < 10
+	}
+	
+	gsort system school
+	levelsof system, local(sys_list)
+
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export excel using "$output/District Accountability Files/`s'_SchoolBaseFile_$date.xlsx", firstrow(var) sheet("Public Release Data") 
+		restore
+	}
+	
 	* School numeric
 	import delimited using "$input/$school_numeric", clear
 	gsort system
@@ -428,8 +454,7 @@ if `abs' == 1 {
 	
 	* School level
 	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_school", clear
-	replace grade_band = "9th through 12th" if grade_band == "9-12"
-	replace grade_band = "K through 8th" if grade_band == "K-8"
+	keep if grade_band == "All Grades"
 	gsort system
 	levelsof system, local(sys_list)
 

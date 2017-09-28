@@ -9,7 +9,7 @@ estimates drop _all
 /*
 Split Student-Level Files 
 Evan Kramer
-9/19/2017
+9/27/2017
 */
 
 * Define macros
@@ -18,29 +18,29 @@ global output "K:/ORP_accountability/data/2017_final_accountability_files/Accoun
 global date = subinstr(c(current_date), " ", "", 3)
 
 ** Master files
-local student_level = "state_student_level_2017_JP_final_09252017.dta"
-local act_sub_student_level = "student_level_act_substitution.csv"
-local district_base = "system_base_2017_JW.csv"
-local district_release = "system_results_2017.xlsx"
-local district_numeric = "system_numeric_2017_JW_Sep08.csv"
-local heat_map = ""
-local school_release = "school_results_2017.xlsx"
-local school_base = "school_base_2017_JW.csv"
-local school_numeric = "school_numeric_2017_JW.csv"
-local wida_student = "WIDA_student_level2017_formatted.csv"
-local wida_district = ""
-local wida_school = ""
-local chronic_student = "student_chronic_absenteeism.csv"
-local chronic_district = "system_chronic_absenteeism.csv"
-local chronic_school = "school_chronic_absenteeism.csv"
+global student_level = "state_student_level_2017_JP_final_09252017.dta"
+global act_sub_student_level = "student_level_act_substitution.csv"
+global district_base = "system_base_2017_sep26.csv"
+global state_release = "system_results_2017.xlsx"
+global district_numeric = "system_numeric_2017_sep26.csv"
+global heat_map = ""
+global school_release = "school_results_2017.xlsx"
+global school_base = "school_base_2017_sep26.csv"
+global school_numeric = "school_numeric_2017_sep26.csv"
+global wida_student = "WIDA_student_level2017_formatted.csv"
+global wida_district = ""
+global wida_school = ""
+global chronic_student = "student_chronic_absenteeism.csv"
+global chronic_district = "system_chronic_absenteeism.csv"
+global chronic_school = "school_chronic_absenteeism.csv"
 
 ** Flags
-local stu = 1
+local stu = 0
 local dis = 0
 local sch = 0
 local sca = 0
 local elp = 0
-local act = 0
+local act = 1
 local amo = 0
 local abs = 0
 local sof = 0
@@ -54,7 +54,7 @@ if `stu' == 1 {
 	!del *.csv
 		
 	* TNReady student level files
-	use "K:/ORP_accountability/projects/2017_student_level_file/`student_level'", clear
+	use "K:/ORP_accountability/projects/2017_student_level_file/$student_level", clear
 	gsort system id
 	levelsof system, local(sys_list)
 	
@@ -62,18 +62,6 @@ if `stu' == 1 {
 		preserve
 		keep if system == `s'
 		export delimited using "$output/Student Level Files/`s'_StudentLevelFiles_$date.csv", replace
-		restore
-	}
-	
-	* ACT substitution student level files
-	import delimited using "$input/`act_sub_student_level'", clear
-	gsort system id
-	levelsof system, local(sys_list)
-
-	foreach s in `sys_list' {
-		preserve
-		keep if system == `s'
-		export delimited using "$output/ACT Files/`s'_ACTSubstitutionStudentLevelFile_$date.csv", replace
 		restore
 	}
 }
@@ -86,7 +74,7 @@ if `dis' == 1 {
 	!del *.xlsx
 	
 	* Base with multiple worksheets
-	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/`district_base'", clear
+	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/$district_base", clear
 	gsort system
 	levelsof system, local(sys_list)
 	
@@ -98,7 +86,7 @@ if `dis' == 1 {
 	}
 	
 	** Suppress state release
-	import excel using "K:/ORP_accountability/projects/2017_district_release/`state_release'", firstrow clear
+	import excel using "K:/ORP_accountability/projects/2017_district_release/$state_release", firstrow clear
 	foreach v in Below Approaching OnTrack Mastered {
 		foreach l in Number Percent {
 			replace `l'`v' = . if ValidTests < 10
@@ -132,7 +120,7 @@ if `dis' == 1 {
 	}
 	
 	* Numeric
-	import delimited using "$input/`district_numeric'", clear
+	import delimited using "$input/$district_numeric", clear
 	gsort system 
 	levelsof system, local(sys_list)
 	
@@ -155,16 +143,8 @@ if `sch' == 1 {
 	!del *.xlsx
 	
 	* School base with second worksheet for public release
-	
-	
-	
-	
-	
-	
-	
-	exit
-	import delimited using "$input/`school_base'", clear
-	gsort system
+	import delimited using "$input/$school_base", clear
+	gsort system school
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -175,7 +155,7 @@ if `sch' == 1 {
 	}
 		
 	* School numeric
-	import delimited using "$input/`school_numeric'", clear
+	import delimited using "$input/$school_numeric", clear
 	gsort system
 	levelsof system, local(sys_list)
 
@@ -211,7 +191,7 @@ if `elp' == 1 {
 	* School level
 	
 	* Student level
-	import delimited using "K:/ORP_accountability/projects/Jessica/Data Returns/Data/WIDA/`wida_student'", clear
+	import delimited using "K:/ORP_accountability/projects/Jessica/Data Returns/Data/WIDA/$wida_student", clear
 	la var drcrecordid "DRC Record ID"
 	la var reportedrecord "Reported Record" 
 	la var statenameabbreviation "State Name Abbreviation"
@@ -396,6 +376,18 @@ if `act' == 1 {
 	!del *.csv
 	!del *.xlsx
 	
+	* ACT substitution student level files
+	import delimited using "$input/$act_sub_student_level", clear
+	gsort system id
+	levelsof system, local(sys_list)
+
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "$output/ACT Files/`s'_ACTSubstitutionStudentLevelFile_$date.csv", replace
+		restore
+	}
+	
 	* District level
 	* School level
 	* Student level
@@ -421,38 +413,44 @@ if `abs' == 1 {
 	!del *.xlsx
 	
 	* District level
-	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/`chronic_district'", clear
+	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_district", clear
+	replace grade_band = "9th through 12th" if grade_band == "9-12"
+	replace grade_band = "K through 8th" if grade_band == "K-8"
 	gsort system
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export delimited using "$output/Chronic Absenteeism/`s'_ChronicAbsenteeismDistrictFile_$date.csv", replace
+		export delimited using "$output/Chronic Absenteeism Files/`s'_ChronicAbsenteeismDistrictFile_$date.csv", replace
 		restore
 	}
 	
 	* School level
-	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/`chronic_school'", clear
+	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_school", clear
+	replace grade_band = "9th through 12th" if grade_band == "9-12"
+	replace grade_band = "K through 8th" if grade_band == "K-8"
 	gsort system
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export delimited using "$output/Chronic Absenteeism/`s'_ChronicAbsenteeismSchoolFile_$date.csv", replace
+		export delimited using "$output/Chronic Absenteeism Files/`s'_ChronicAbsenteeismSchoolFile_$date.csv", replace
 		restore
 	}
 	
 	* Student level
-	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/`chronic_student'", clear
+	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_student", clear
+	rename (isp_days instructional_calendar_days) (student_enrolled_days school_instructional_days)
+	destring absentee_rate, force replace
 	gsort system
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export delimited using "$output/Chronic Absenteeism/`s'_ChronicAbsenteeismStudentFile_$date.csv", replace
+		export delimited using "$output/Chronic Absenteeism Files/`s'_ChronicAbsenteeismStudentFile_$date.csv", replace
 		restore
 	}
 }

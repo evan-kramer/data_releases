@@ -37,7 +37,7 @@ global chronic_school = "school_chronic_absenteeism.csv"
 ** Flags
 local stu = 0
 local dis = 0
-local sch = 1
+local sch = 0
 local sca = 0
 local elp = 0
 local act = 0
@@ -133,6 +133,7 @@ if `dis' == 1 {
 	
 	* Numeric
 	import delimited using "$input/$district_numeric", clear
+	rename (bb_percentile_2015 pa_percentile_2015) (bb_percentile_prior pa_percentile_prior)
 	gsort system 
 	levelsof system, local(sys_list)
 	
@@ -140,7 +141,7 @@ if `dis' == 1 {
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/District Accountability Files/`s'_DistrictNumericFile_$date.xlsx", replace 
+		export excel using "$output/District Accountability Files/`s'_DistrictNumericFile_$date.xlsx", replace firstrow(var)
 		restore
 	}
 	
@@ -209,19 +210,20 @@ if `sch' == 1 {
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/District Accountability Files/`s'_SchoolBaseFile_$date.xlsx", firstrow(var) sheet("Public Release Data") 
+		export excel using "$output/School Level Files/`s'_SchoolBaseFile_$date.xlsx", firstrow(var) sheet("Public Release Data") 
 		restore
 	}
 	
 	* School numeric
 	import delimited using "$input/$school_numeric", clear
+	rename (bb_percentile_2015 pa_percentile_2015) (bb_percentile_prior pa_percentile_prior)
 	gsort system
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/School Level Files/`s'_SchoolNumericFile_$date.xlsx", replace firstrow(varlabels)
+		export excel using "$output/School Level Files/`s'_SchoolNumericFile_$date.xlsx", replace firstrow(var)
 		restore
 	}
 }

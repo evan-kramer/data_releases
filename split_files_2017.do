@@ -168,27 +168,44 @@ if `sch' == 1 {
 		
 	** Suppress state release
 	import excel using "$input/$school_release", firstrow clear
-		rename (n_below_bsc n_approach_bsc n_ontrack_prof n_mastered_adv n_ontrack_mastered ///
-		pct_below_bsc pct_approach_bsc pct_ontrack_prof pct_mastered_adv pct_ontrack_prof_adv ///
-		pct_below_change pct_ontrack_mastered_change) ///
-		(n_below n_approaching n_on_track n_mastered n_on_mastered pct_below ///
-		pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
-	
-	foreach v in below approaching on_track mastered on_mastered {
+	rename (Year DistrictNumber DistrictName SchoolNumber SchoolName Subject Subgroup Grade ValidTests BelowBelowBasic ApproachingBasic OnTrackProficient MasteredAdvanced N O P Q OnTrackMasteredProficientA BelowChange OnTrackMasteredChange) ///
+		(year system system_name school school_name subject subgroup grade valid_tests n_below n_approaching n_on_track n_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
+		foreach v in below approaching on_track mastered {
 		foreach l in n_ pct_ {
 			replace `l'`v' = . if valid_tests < 10
 		}
 		replace pct_`v' = . if pct_`v' > 99 | pct_`v' < 1
 		replace n_`v' = . if n_`v' / valid_tests > .99 | n_`v' / valid_tests < .01
 	}
-	
+	replace pct_on_mastered = . if pct_on_mastered > 99 | pct_on_mastered < 1
 	foreach v in below on_mastered {
 		replace change_in_pct_`v' = . if valid_tests < 10
-	}
+	}	
 	
-	gsort system school
+	la var year "Year" 
+	la var system "District Number" 
+	la var system_name "District Name" 
+	la var school "School Number"
+	la var school_name "School Name"
+	la var subject "Subject" 
+	la var subgroup "Subgroup" 
+	la var grade "Grade" 
+	la var valid_tests "Valid Tests" 
+	la var n_below "# Below (Below Basic)"
+	la var n_approaching "# Approaching (Basic)"
+	la var n_on_track "# On Track (Proficient)"
+	la var n_mastered "# Mastered (Advanced)"
+	la var pct_below "% Below (Below Basic)"
+	la var pct_approaching "% Approaching (Basic)"
+	la var pct_on_track "% On Track (Proficient)"
+	la var pct_mastered "% Mastered (Advanced)" 
+	la var pct_on_mastered "% On Track/Mastered (Proficient/Advanced)"
+	la var change_in_pct_below "% Below Change"
+	la var change_in_pct_on_mastered "% On Track/Mastered Change"
+	
+	gsort system school	
 	levelsof system, local(sys_list)
-
+	
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'

@@ -18,15 +18,15 @@ global output "K:/ORP_accountability/data/2017_final_accountability_files/Accoun
 global date = subinstr(c(current_date), " ", "", 3)
 
 ** Master files
-global student_level = "state_student_level_2017_JP_final_09252017.dta"
+global student_level = "state_student_level_2017_JP_final_10012017.dta"
 global act_sub_student_level = "student_level_act_substitution.csv"
-global district_base = "system_base_2017_sep27.csv"
+global district_base = "system_base_2017_oct01.csv"
 global district_release = "system_release_2017_JW_09262017_formatted.xlsx"
-global district_numeric = "system_numeric_2017_sep27.csv"
+global district_numeric = "system_numeric_2017_oct01.csv"
 global heat_map = ""
 global school_release = "school_release_2017_JW_09262017_formatted.xlsx"
-global school_base = "school_base_2017_sep27.csv"
-global school_numeric = "school_numeric_2017_sep27.csv"
+global school_base = "school_base_2017_oct01.csv"
+global school_numeric = "school_numeric_2017_oct01.csv"
 global wida_student = "WIDA_student_level2017_formatted.csv"
 global wida_district = ""
 global wida_school = ""
@@ -44,7 +44,7 @@ local act = 0
 local amo = 0
 local abs = 0
 local sof = 0
-local cor = 0
+local cor = 1
 local che = 0
 
 * Student level files
@@ -524,79 +524,103 @@ if `sof' == 1 {
 if `cor' == 1 {
 	cd "K:/ORP_accountability/projects/Evan/Data Releases"
 	!del *CORE*.csv
+	!del *CORE*.xlsx
 	
 	* Base with multiple worksheets
-	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/system_base_2017_JW.csv", clear
-	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk.dta"
-	drop _merge system_namefinal analyst email director
+	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/$district_base", clear
+	gsort system
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
+	drop _merge
 	
-	gsort region
 	levelsof region, local(core_list)
-	
 	foreach r in `core_list' {
 		preserve
 		keep if region == "`r'"
-		export excel using "`r'_Base.xlsx", replace firstrow(varlabels) sheet("District Base File")
+		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Base_$date.xlsx", replace firstrow(varlabels) sheet("District Base File")
 		restore
 	}
 	
 	** Suppress state release
-	/*
-	import excel using "K:/ORP_accountability/projects/2017_district_release/system_results_2017.xlsx", firstrow clear
-	mmerge System using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk.dta", umatch(system)
-	drop _merge system_name analyst email director
-	
-	foreach v in Below Approaching OnTrack Mastered {
-		foreach l in Number Percent {
-			replace `l'`v' = . if ValidTests < 10
-			la var `l'`v' "`l' `v'"
+	import excel using "$input/$district_release", firstrow clear
+	rename (Year DistrictNumber DistrictName Subject Subgroup Grade ValidTests BelowBelowBasic ApproachingBasic OnTrackProficient MasteredAdvanced L M N O OnTrackMasteredProficientA BelowChange OnTrackMasteredChange) ///
+		(year system system_name subject subgroup grade valid_tests n_below n_approaching n_on_track n_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
+		
+	foreach v in below approaching on_track mastered {
+		foreach l in n_ pct_ {
+			replace `l'`v' = . if valid_tests < 10
 		}
-		replace Percent`v' = . if Percent`v' > 99 | Percent`v' < 1
-		replace Number`v'  = . if Number`v' / ValidTests > .99 | Number`v' / ValidTests < .01
+		replace pct_`v' = . if pct_`v' > 99 | pct_`v' < 1
+		replace n_`v' = . if n_`v' / valid_tests > .99 | n_`v' / valid_tests < .01
 	}
-	replace PercentOnTrackMastered = . if PercentOnTrackMastered > 99 | PercentOnTrackMastered < 1
-	foreach v in OnTrack Below {
-		replace ChangeinPercent`v' = . if ValidTests < 10
+	replace pct_on_mastered = . if pct_on_mastered > 99 | pct_on_mastered < 1
+	foreach v in below on_mastered {
+		replace change_in_pct_`v' = . if valid_tests < 10
 	}
 	
-	** Output files
-	la var SystemName "System Name"
-	la var ValidTests "Valid Tests"
-	la var NumberOnTrack "Number On Track"
-	la var PercentOnTrack "Percent On Track"
-	la var PercentOnTrackMastered "Percent On Track Mastered"
-	la var ChangeinPercentOnTrack "Change in Percent On Track"
-	la var ChangeinPercentBelow "Change in Percent Below"
-	*/
+	la var year "Year" 
+	la var system "District Number" 
+	la var system_name "District Name" 
+	la var subject "Subject" 
+	la var subgroup "Subgroup" 
+	la var grade "Grade" 
+	la var valid_tests "Valid Tests" 
+	la var n_below "# Below (Below Basic)"
+	la var n_approaching "# Approaching (Basic)"
+	la var n_on_track "# On Track (Proficient)"
+	la var n_mastered "# Mastered (Advanced)"
+	la var pct_below "% Below (Below Basic)"
+	la var pct_approaching "% Approaching (Basic)"
+	la var pct_on_track "% On Track (Proficient)"
+	la var pct_mastered "% Mastered (Advanced)" 
+	la var pct_on_mastered "% On Track/Mastered (Proficient/Advanced)"
+	la var change_in_pct_below "% Below Change"
+	la var change_in_pct_on_mastered "% On Track/Mastered Change"
 	
-	/*
-	gsort region
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
+	drop _merge
 	levelsof region, local(core_list)
 
 	foreach r in `core_list' {
 		preserve
 		keep if region == "`r'"
-		export excel using "`r'_Base.xlsx", firstrow(varlabels) sheet("Public Release Data") 
+		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Base_$date.xlsx", firstrow(varlabels) sheet("Public Release Data") 
 		restore
 	}
-	*/
+	
+	
+	
+	exit
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	* Numeric
-	import delimited using "$input/system_numeric_2017_JW_Sep08.csv", clear
-	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk.dta"
-	drop _merge system_namefinal analyst email director
-
-	gsort region
-	levelsof region, local(core_list)
+	import delimited using "$input/$district_numeric", clear
+	rename (bb_percentile_2015 pa_percentile_2015) (bb_percentile_prior pa_percentile_prior)
+	gsort system 
+	levelsof system, local(sys_list)
 	
 	** Output files
-	foreach r in `sys_list' {
+	foreach s in `sys_list' {
 		preserve
-		keep if region == "`r'"
-		export excel using "`r'_Numeric.xlsx", replace 
+		keep if system == `s'
+		export excel using "$output/District Accountability Files/`s'_DistrictNumericFile_$date.xlsx", replace firstrow(var)
 		restore
 	}
+	
+	
+	
+	
+	
+	
+	
+	exit
+	
 	
 	* Aggregate
 	import delimited using "$input/system_base_2017_JW.csv", clear

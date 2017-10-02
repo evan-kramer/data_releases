@@ -36,7 +36,7 @@ global chronic_school = "school_chronic_absenteeism.csv"
 
 ** Flags
 local stu = 0
-local dis = 0
+local dis = 1
 local sch = 0
 local sca = 0
 local elp = 0
@@ -75,7 +75,6 @@ if `dis' == 1 {
 	
 	* Base with multiple worksheets
 	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/$district_base", clear
-	gsort system
 	levelsof system, local(sys_list)
 	
 	foreach s in `sys_list' {
@@ -120,7 +119,7 @@ if `dis' == 1 {
 	la var change_in_pct_below "% Below Change"
 	la var change_in_pct_on_mastered "% On Track/Mastered Change"
 	
-	gsort system
+	
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -133,7 +132,7 @@ if `dis' == 1 {
 	* Numeric
 	import delimited using "$input/$district_numeric", clear
 	rename (bb_percentile_2015 pa_percentile_2015) (bb_percentile_prior pa_percentile_prior)
-	gsort system 
+	 
 	levelsof system, local(sys_list)
 	
 	** Output files
@@ -156,7 +155,6 @@ if `sch' == 1 {
 	
 	* School base with second worksheet for public release
 	import delimited using "$input/$school_base", clear
-	gsort system school
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -203,7 +201,6 @@ if `sch' == 1 {
 	la var change_in_pct_below "% Below Change"
 	la var change_in_pct_on_mastered "% On Track/Mastered Change"
 	
-	gsort system school	
 	levelsof system, local(sys_list)
 	
 	foreach s in `sys_list' {
@@ -215,7 +212,6 @@ if `sch' == 1 {
 	
 	* School numeric
 	import delimited using "$input/$school_numeric", clear
-	gsort system school
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -437,7 +433,6 @@ if `act' == 1 {
 	
 	* ACT substitution student level files
 	import delimited using "$input/$act_sub_student_level", clear
-	gsort system id
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -475,7 +470,6 @@ if `abs' == 1 {
 	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_district", clear
 	replace grade_band = "9th through 12th" if grade_band == "9-12"
 	replace grade_band = "K through 8th" if grade_band == "K-8"
-	gsort system
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -488,7 +482,6 @@ if `abs' == 1 {
 	* School level
 	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_school", clear
 	keep if grade_band == "All Grades"
-	gsort system
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {
@@ -502,7 +495,6 @@ if `abs' == 1 {
 	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_student", clear
 	rename (isp_days instructional_calendar_days) (student_enrolled_days school_instructional_days)
 	destring absentee_rate, force replace
-	gsort system
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {

@@ -21,10 +21,10 @@ global date = subinstr(c(current_date), " ", "", 3)
 global student_level = "state_student_level_2017_JP_final_10012017.dta"
 global act_sub_student_level = "student_level_act_substitution.csv"
 global district_base = "system_base_2017_oct01.csv"
-global district_release = "system_release_2017_JW_09262017_formatted.xlsx"
+global district_release = "system_release_2017_JW_10022017_formatted.xlsx"
 global district_numeric = "system_numeric_2017_oct01.csv"
 global heat_map = ""
-global school_release = "school_release_2017_JW_09262017_formatted.xlsx"
+global school_release = "school_release_2017_JW_10022017_formatted.xlsx"
 global school_base = "school_base_2017_oct01.csv"
 global school_numeric = "school_numeric_2017_oct01.csv"
 global wida_student = "WIDA_student_level2017_formatted.csv"
@@ -44,7 +44,7 @@ local act = 0
 local amo = 0
 local abs = 0
 local sof = 0
-local cor = 1
+local cor = 0
 local che = 0
 
 * Student level files
@@ -87,17 +87,16 @@ if `dis' == 1 {
 	
 	** Suppress state release
 	import excel using "$input/$district_release", firstrow clear
-	rename (Year DistrictNumber DistrictName Subject Subgroup Grade ValidTests BelowBelowBasic ApproachingBasic OnTrackProficient MasteredAdvanced L M N O OnTrackMasteredProficientA BelowChange OnTrackMasteredChange) ///
-		(year system system_name subject subgroup grade valid_tests n_below n_approaching n_on_track n_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
+	rename (n_below_bsc n_approach_bsc n_ontrack_prof n_mastered_adv n_ontrack_mastered pct_below_bsc pct_approach_bsc pct_ontrack_prof pct_mastered_adv pct_ontrack_prof_adv pct_below_change pct_ontrack_mastered_change) ///
+		(n_below n_approaching n_on_track n_mastered n_on_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
 		
-	foreach v in below approaching on_track mastered {
+	foreach v in below approaching on_track mastered on_mastered {
 		foreach l in n_ pct_ {
 			replace `l'`v' = . if valid_tests < 10
 		}
 		replace pct_`v' = . if pct_`v' > 99 | pct_`v' < 1
 		replace n_`v' = . if n_`v' / valid_tests > .99 | n_`v' / valid_tests < .01
 	}
-	replace pct_on_mastered = . if pct_on_mastered > 99 | pct_on_mastered < 1
 	foreach v in below on_mastered {
 		replace change_in_pct_`v' = . if valid_tests < 10
 	}
@@ -169,9 +168,10 @@ if `sch' == 1 {
 		
 	** Suppress state release
 	import excel using "$input/$school_release", firstrow clear
-	rename (Year DistrictNumber DistrictName SchoolNumber SchoolName Subject Subgroup Grade ValidTests BelowBelowBasic ApproachingBasic OnTrackProficient MasteredAdvanced N O P Q OnTrackMasteredProficientA BelowChange OnTrackMasteredChange) ///
-		(year system system_name school school_name subject subgroup grade valid_tests n_below n_approaching n_on_track n_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
-		foreach v in below approaching on_track mastered {
+	rename (System SystemName School SchoolName Subject Subgroup Grade ValidTests NBelow NApproaching NOnTrack NMastered PercentBelow PercentApproaching PercentOnTrack PercentMastered PercentOnTrackMastered BelowChange OMChange) ///
+		(system system_name school school_name subject subgroup grade valid_tests n_below n_approaching n_on_track n_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
+			
+	foreach v in below approaching on_track mastered {
 		foreach l in n_ pct_ {
 			replace `l'`v' = . if valid_tests < 10
 		}
@@ -183,7 +183,6 @@ if `sch' == 1 {
 		replace change_in_pct_`v' = . if valid_tests < 10
 	}	
 	
-	la var year "Year" 
 	la var system "District Number" 
 	la var system_name "District Name" 
 	la var school "School Number"
@@ -216,8 +215,7 @@ if `sch' == 1 {
 	
 	* School numeric
 	import delimited using "$input/$school_numeric", clear
-	rename (bb_percentile_2015 pa_percentile_2015) (bb_percentile_prior pa_percentile_prior)
-	gsort system
+	gsort system school
 	levelsof system, local(sys_list)
 
 	foreach s in `sys_list' {

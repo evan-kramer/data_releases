@@ -9,7 +9,7 @@ estimates drop _all
 /*
 Split Student-Level Files 
 Evan Kramer
-9/27/2017
+10/5/2017
 */
 
 * Define macros
@@ -36,11 +36,11 @@ global chronic_school = "school_chronic_absenteeism.csv"
 
 ** Flags
 local stu = 0
-local dis = 1
+local dis = 0
 local sch = 0
 local sca = 0
 local elp = 0
-local act = 0
+local act = 1
 local amo = 0
 local abs = 0
 local sof = 0
@@ -86,16 +86,17 @@ if `dis' == 1 {
 	
 	** Suppress state release
 	import excel using "$input/$district_release", firstrow clear
-	rename (n_below_bsc n_approach_bsc n_ontrack_prof n_mastered_adv n_ontrack_mastered pct_below_bsc pct_approach_bsc pct_ontrack_prof pct_mastered_adv pct_ontrack_prof_adv pct_below_change pct_ontrack_mastered_change) ///
-		(n_below n_approaching n_on_track n_mastered n_on_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
+	rename (Year System SystemName Subject Subgroup Grade ValidTests NBelow NApproaching NOnTrack NMastered PercentBelow PercentApproaching PercentOnTrack PercentMastered PercentOnTrackMastered BelowChange OMChange) ///
+		(year system system_name subject subgroup grade valid_tests n_below n_approaching n_on_track n_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
 		
-	foreach v in below approaching on_track mastered on_mastered {
+	foreach v in below approaching on_track mastered {
 		foreach l in n_ pct_ {
 			replace `l'`v' = . if valid_tests < 10
 		}
 		replace pct_`v' = . if pct_`v' > 99 | pct_`v' < 1
 		replace n_`v' = . if n_`v' / valid_tests > .99 | n_`v' / valid_tests < .01
 	}
+	replace pct_on_mastered = . if pct_on_mastered > 99 | pct_on_mastered < 1
 	foreach v in below on_mastered {
 		replace change_in_pct_`v' = . if valid_tests < 10
 	}
@@ -428,8 +429,7 @@ if `elp' == 1 {
 if `act' == 1 {
 	* Remove all previous files
 	cd "$output/ACT Files"
-	!del *.csv
-	!del *.xlsx
+	!del *ACT_*.csv
 	
 	* ACT substitution student level files
 	import delimited using "$input/$act_sub_student_level", clear
@@ -442,9 +442,31 @@ if `act' == 1 {
 		restore
 	}
 	
-	* District level
-	* School level
+	* District and school level
+	foreach l in district school {
+		local m = strproper("`l'")
+		use "K:/ORP_accountability/data/2017_ACT/ACT_`m'2018.dta", clear
+		levelsof system, local(sys_list)
+		
+		foreach s in `sys_list' {
+			preserve
+			keep if system == `s'
+			export delimited using "$output/ACT Files/`s'_`m'LevelACT_$date.csv", replace
+			restore
+		}
+	}
+	
 	* Student level
+	use "K:/ORP_accountability/data/2017_ACT/2018_ACT_student_level_actcohorthighest.dta", clear
+	levelsof system, local(sys_list)
+	
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "$output/ACT Files/`s'_StudentLevelACT_$date.csv", replace
+		restore
+	}
+	
 	* District retake
 	* School retake
 	* Student retake

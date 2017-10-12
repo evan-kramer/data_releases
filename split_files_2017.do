@@ -36,13 +36,13 @@ global chronic_school = "school_chronic_absenteeism.csv"
 global amo_input = "K:/ORP_accountability/projects/2018_amo"
 
 ** Flags
-local stu = 1
-local dis = 1
-local sch = 1
+local stu = 0
+local dis = 0
+local sch = 0
 local sca = 0
 local elp = 0
 local act = 0
-local amo = 1
+local amo = 0
 local abs = 0
 local sof = 0
 local cor = 0
@@ -497,7 +497,7 @@ if `amo' == 1 {
 	rename (amo_target_4 valid_tests) (double_amo_target valid_tests_prior)
 	gen year = 2018, before(system)
 	gen subject = "ELPA", after(system_name)
-	gen grade = "K through 12th", after(subject)
+	gen grade = "All Grades", after(subject)
 	tempfile amo_elpa
 	
 	save `amo_elpa', replace
@@ -542,17 +542,19 @@ if `amo' == 1 {
 	save `amo_sr', replace
 	
 	import delimited using "$amo_input/school_ready_grad.csv", clear
+	gen year = 2018, before(system)
 	rename (grad_target grad_target_double) (amo_target double_amo_target)
 	drop *act* 
-	gen subject = "Graduation Rate", after(school_name)
+	gen subject = "Graduation Rate", after(school)
 	gen grade = "9th through 12th", after(subject)
 	tempfile amo_grad
 	save `amo_grad', replace
 	
 	import delimited using "$amo_input/school_ready_grad.csv", clear
+	gen year = 2018, before(system)
 	drop grad_target* grad_rate 
 	rename (act_grad_target act_grad_target_double) (amo_target double_amo_target)
-	gen subject = "Ready Graduate", after(school_name)
+	gen subject = "Ready Graduate", after(school)
 	gen grade = "9th through 12th", after(subject)
 	tempfile amo_ready_grad
 	save `amo_ready_grad', replace
@@ -564,14 +566,16 @@ if `amo' == 1 {
 	append using `amo_sr'
 	append using `amo_grad'
 	append using `amo_ready_grad'
-	gsort system school -system_name -school_name
-	foreach v in system_name school_name pool {
+	gsort system school -pool
+	replace pool = pool[_n-1] if pool == "" & system == system[_n-1] & school == school[_n-1]
+	gsort system school -system_name -school_name 
+	foreach v in system_name school_name {
 		replace `v' = `v'[_n-1] if `v' == "" & system == system[_n-1] & school == school[_n-1]
 	}
 	gsort system school -subject grade subgroup
 	order year system* school* pool subject grade subgroup amo_target double_amo_target /// 
 		amo_reduction_target double_amo_reduction_target valid_tests_prior pct_on_mastered_prior ///
-		grad_cohort grad_rate valid_tests_act act_21_or_higher act_grad n_students ///
+		grad_cohort grad_rate valid_tests_act act_21_or_higher n_students ///
 		n_chronically_absent pct_chronically_absent, first
 	
 	levelsof system, local(sys_list)

@@ -7,9 +7,9 @@ program drop _all
 estimates drop _all
 
 /*
-Split Student-Level Files 
+Split Files 
 Evan Kramer
-10/5/2017
+10/12/2017
 */
 
 * Define macros
@@ -18,30 +18,31 @@ global output "K:/ORP_accountability/data/2017_final_accountability_files/Accoun
 global date = subinstr(c(current_date), " ", "", 3)
 
 ** Master files
-global student_level = "state_student_level_2017_JP_final_10012017.dta"
+global student_level = "state_student_level_2017_JP_final_10112017.dta"
 global act_sub_student_level = "student_level_act_substitution.csv"
-global district_base = "system_base_2017_oct01.csv"
-global district_release = "system_release_2017_JW_10022017_formatted.xlsx"
-global district_numeric = "system_numeric_2017_oct01.csv"
+global district_base = "system_base_2017_oct11.csv"
+global district_release = "system_release_2017_JW_10112017_formatted.xlsx"
+global district_numeric = "system_numeric_2017_oct11.csv"
 global heat_map = ""
-global school_release = "school_release_2017_JW_10022017_formatted.xlsx"
-global school_base = "school_base_2017_oct01.csv"
-global school_numeric = "school_numeric_2017_oct01.csv"
+global school_release = "school_release_2017_JW_10112017_formatted.xlsx"
+global school_base = "school_base_2017_oct11.csv"
+global school_numeric = "school_numeric_2017_oct11.csv"
 global wida_student = "WIDA_student_level2017_formatted.csv"
 global wida_district = ""
 global wida_school = ""
 global chronic_student = "student_chronic_absenteeism.csv"
 global chronic_district = "system_chronic_absenteeism.csv"
 global chronic_school = "school_chronic_absenteeism.csv"
+global amo_input = "K:/ORP_accountability/projects/2018_amo"
 
 ** Flags
-local stu = 0
-local dis = 0
-local sch = 0
+local stu = 1
+local dis = 1
+local sch = 1
 local sca = 0
 local elp = 0
-local act = 1
-local amo = 0
+local act = 0
+local amo = 1
 local abs = 0
 local sof = 0
 local cor = 0
@@ -479,8 +480,135 @@ if `amo' == 1 {
 	!del *.xlsx
 	
 	* District level
+	** Accountability targets
+	import delimited using "$amo_input/district_success_rate.csv", clear
+	rename amo_target_4 double_amo_target
+	tempfile amo_sr
+	save `amo_sr', replace
+	
+	import delimited using "$amo_input/district_grad.csv", clear
+	rename (grad_target grad_target_double) (amo_target double_amo_target)
+	gen subject = "Graduation Rate", after(system_name)
+	gen grade = "9th through 12th", after(subject)
+	tempfile amo_grad
+	save `amo_grad', replace
+	
+	import delimited using "$amo_input/district_elpa.csv", clear
+	rename (amo_target_4 valid_tests) (double_amo_target valid_tests_prior)
+	gen year = 2018, before(system)
+	gen subject = "ELPA", after(system_name)
+	gen grade = "K through 12th", after(subject)
+	tempfile amo_elpa
+	
+	save `amo_elpa', replace
+	import delimited using "$amo_input/system_chronic_absenteeism.csv", clear
+	gen subject = "Chronically Out of School", after(system_name)
+	rename (grade_band amo_reduction_target_double) (grade double_amo_reduction_target) 
+	order grade, after(subject)
+	append using `amo_sr'
+	append using `amo_grad'
+	append using `amo_elpa'
+	gsort system -subject grade subgroup
+	order year system* subject grade subgroup amo_target double_amo_target amo_reduction_target ///
+		double_amo_reduction_target valid_tests_prior pct_on_mastered_prior grad_cohort grad_rate ///
+		n_met_growth pct_met_growth n_students n_chronically_absent pct_chronically_absent, first
+		
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export excel using "$output/AMO Files/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
+		restore
+	}
+	
+	** Subject level targets
+	import delimited using "$amo_input/district_grade_subject.csv", clear
+	rename amo_target_4 double_amo_target
+	order year system system_name subject grade subgroup amo_target double_amo_target subgroup valid_tests, first
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export excel using "$output/AMO Files/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
+		restore
+	}
+	
 	* School level
+	** Accountability targets
+	import delimited using "$amo_input/school_success_rate.csv", clear
+	rename amo_target_4 double_amo_target
+	gen grade = "All Grades", after(subject)
+	tempfile amo_sr
+	save `amo_sr', replace
+	
+	import delimited using "$amo_input/school_ready_grad.csv", clear
+	rename (grad_target grad_target_double) (amo_target double_amo_target)
+	drop *act* 
+	gen subject = "Graduation Rate", after(school_name)
+	gen grade = "9th through 12th", after(subject)
+	tempfile amo_grad
+	save `amo_grad', replace
+	
+	import delimited using "$amo_input/school_ready_grad.csv", clear
+	drop grad_target* grad_rate 
+	rename (act_grad_target act_grad_target_double) (amo_target double_amo_target)
+	gen subject = "Ready Graduate", after(school_name)
+	gen grade = "9th through 12th", after(subject)
+	tempfile amo_ready_grad
+	save `amo_ready_grad', replace
+	
+	import delimited using "$amo_input/school_chronic_absenteeism.csv", clear
+	gen subject = "Chronically Out of School", after(school_name)
+	rename (grade_band amo_reduction_target_double) (grade double_amo_reduction_target) 
+	order grade, after(subject)
+	append using `amo_sr'
+	append using `amo_grad'
+	append using `amo_ready_grad'
+	gsort system school -system_name -school_name
+	foreach v in system_name school_name pool {
+		replace `v' = `v'[_n-1] if `v' == "" & system == system[_n-1] & school == school[_n-1]
+	}
+	gsort system school -subject grade subgroup
+	order year system* school* pool subject grade subgroup amo_target double_amo_target /// 
+		amo_reduction_target double_amo_reduction_target valid_tests_prior pct_on_mastered_prior ///
+		grad_cohort grad_rate valid_tests_act act_21_or_higher act_grad n_students ///
+		n_chronically_absent pct_chronically_absent, first
+	
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export excel using "$output/AMO Files/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
+		restore
+	}
+	
+	collapse (firstnm) school_name, by(system school)
+	tempfile temp
+	save `temp', replace
+	
+	** Subject level targets
+	import delimited using "$amo_input/school_subject.csv", clear
+	rename amo_target_4 double_amo_target
+	foreach v in pct_on_mastered_prior amo_target double_amo_target {
+		replace `v' = "" if `v' == "NA"
+		destring `v', replace
+	}
+	mmerge system school using `temp', type(n:1)
+	drop if _merge == 2
+	drop _merge 
+	gsort system school subject subgroup
+	order year system* school* pool subject subgroup amo_target double_amo_target /// 
+		valid_tests_prior pct_on_mastered_prior, first
+	
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export excel using "$output/AMO Files/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
+		restore
+	}
 }
+
 * Chronic absenteeism files
 if `abs' == 1 {
 	* Remove all previous files

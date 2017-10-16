@@ -9,7 +9,7 @@ estimates drop _all
 /*
 Split Files 
 Evan Kramer
-10/12/2017
+10/16/2017
 */
 
 * Define macros
@@ -39,7 +39,7 @@ global amo_input = "K:/ORP_accountability/projects/2018_amo"
 local stu = 0
 local dis = 0
 local sch = 0
-local sca = 0
+local sca = 1
 local elp = 0
 local act = 0
 local amo = 0
@@ -231,11 +231,57 @@ if `sca' == 1 {
 	!del *.xlsx
 	
 	* School accountability file
+	import delimited using "K:/ORP_accountability/projects/2017_school_accountability/grade_pools_designation_immune.csv", clear
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "$output/School Accountability Files/`s'_SchoolAccountabilityFile.csv", replace
+		restore
+	}
+	
 	* Data summary
+	import delimited using "K:/ORP_accountability/projects/2017_school_accountability/school_summary_file.csv", clear
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve 
+		keep if system == `s'
+		export delimited using "$output/School Accountability Files/`s'_DataSummary_$date.csv", replace
+		restore
+	}
+	
 	* Reward school file
+	import delimited using "K:/ORP_accountability/projects/2017_school_accountability/reward.csv", clear
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "$output/School Accountability Files/`s'_RewardFile_$date.csv", replace
+		restore
+	}
+	
 	* Priority exit and improving file
+	import delimited using "K:/ORP_accountability/projects/2017_school_accountability/priority_exit_improving.csv", clear
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve 
+		keep if system == `s'
+		export delimited using "$output/School Accountability Files/`s'_PriorityExitImprove_$date.csv", replace
+		restore
+	}
+	
 	* Focus exit and improving file
+	import delimited using "K:/ORP_accountability/projects/2017_school_accountability/focus_exit_improving.csv", clear
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "$output/School Accountability Files/`s'_FocusExitImprove_$date.csv", replace
+		restore
+	}
+	
 	* School accountability lists
+	
 }
 * ELPA files
 if `elp' == 1 {
@@ -670,122 +716,111 @@ if `cor' == 1 {
 	!del *CORE*.csv
 	!del *CORE*.xlsx
 	
-	* Base with multiple worksheets
-	import delimited using "K:/ORP_accountability/data/2017_final_accountability_files/$district_base", clear
-	gsort system
-	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
-	drop _merge
-	
-	levelsof region, local(core_list)
-	foreach r in `core_list' {
-		preserve
-		keep if region == "`r'"
-		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Base_$date.xlsx", replace firstrow(varlabels) sheet("District Base File")
-		restore
-	}
-	
-	** Suppress state release
-	import excel using "$input/$district_release", firstrow clear
-	rename (Year DistrictNumber DistrictName Subject Subgroup Grade ValidTests BelowBelowBasic ApproachingBasic OnTrackProficient MasteredAdvanced L M N O OnTrackMasteredProficientA BelowChange OnTrackMasteredChange) ///
-		(year system system_name subject subgroup grade valid_tests n_below n_approaching n_on_track n_mastered pct_below pct_approaching pct_on_track pct_mastered pct_on_mastered change_in_pct_below change_in_pct_on_mastered)
-		
-	foreach v in below approaching on_track mastered {
-		foreach l in n_ pct_ {
-			replace `l'`v' = . if valid_tests < 10
+	* Base and numeric
+	foreach l in base numeric {
+		local m = strproper("`l'")
+		import delimited using "$input/system_`l'_2017_oct11.csv", clear
+		mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
+		collapse (sum) valid_tests n_* grad_c* dropout_count, by(year region subject grade subgroup)
+		foreach v in below approaching on_track mastered {
+			gen pct_`v' = round(100 * n_`v' / valid_tests, 0.1) if valid_tests >= 10 & valid_tests != ., after(n_`v')
 		}
-		replace pct_`v' = . if pct_`v' > 99 | pct_`v' < 1
-		replace n_`v' = . if n_`v' / valid_tests > .99 | n_`v' / valid_tests < .01
-	}
-	replace pct_on_mastered = . if pct_on_mastered > 99 | pct_on_mastered < 1
-	foreach v in below on_mastered {
-		replace change_in_pct_`v' = . if valid_tests < 10
-	}
+		gen pct_on_mastered = round(100 * (n_on_track + n_mastered) / valid_tests, 0.1) if valid_tests >= 10 & valid_tests !=., after(pct_mastered)
+		foreach v in grad dropout {
+			gen `v'_rate = round(100 * `v'_count / grad_cohort, 0.1) if grad_cohort >= 10 & grad_cohort != ., after(`v'_count)
+		}
+		gsort -year subject subgroup
+		
+		levelsof region, local(core_list)
+		foreach r in `core_list' {
+			preserve
+			keep if region == "`r'"
+			export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Aggregate_$date.xlsx", firstrow(var) sheet("`m'")
+			restore
+		}
+	}	
 	
-	la var year "Year" 
-	la var system "District Number" 
-	la var system_name "District Name" 
-	la var subject "Subject" 
-	la var subgroup "Subgroup" 
-	la var grade "Grade" 
-	la var valid_tests "Valid Tests" 
-	la var n_below "# Below (Below Basic)"
-	la var n_approaching "# Approaching (Basic)"
-	la var n_on_track "# On Track (Proficient)"
-	la var n_mastered "# Mastered (Advanced)"
-	la var pct_below "% Below (Below Basic)"
-	la var pct_approaching "% Approaching (Basic)"
-	la var pct_on_track "% On Track (Proficient)"
-	la var pct_mastered "% Mastered (Advanced)" 
-	la var pct_on_mastered "% On Track/Mastered (Proficient/Advanced)"
-	la var change_in_pct_below "% Below Change"
-	la var change_in_pct_on_mastered "% On Track/Mastered Change"
-	
+	* ACT
+	import delimited using "K:/ORP_accountability/data/2017_ACT/act_student_level_with_demographics_EK.csv", clear
 	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
+	
+	gen bhn = inlist(race_ethnicity, "B", "H", "I")
+	foreach v in el econ_dis swd {
+		replace `v' = "1" if `v' == "Y"
+		destring `v', force replace
+	}
+	tempfile temp
+	save `temp', replace
+	
+	gen enrolled = 1
+	gen valid_tests = composite != . 
+	gen n_21_or_higher = valid_tests == 1 & composite >= 21
+	gen n_below_19 = valid_tests == 1 & composite < 19
+	tempfile pre 
+	save `pre', replace
+	
+	* All
+	use `pre', clear
+	collapse (sum) enrolled valid_tests n_*, by(region)
+	foreach v in cr_english cr_math cr_reading cr_science cr_all 21_or_higher below_19 {
+		gen pct_`v' = round(100 * n_`v' / valid_tests, 0.1), after(n_`v')
+	}
+	gen subgroup = "All Students", after(region)
+	drop if region == ""
+	tempfile all
+	save `all', replace
+	use `temp', clear
+	collapse (mean) composite english math reading science, by(region)
+	foreach v in composite english math reading science {
+		replace `v' = round(`v', 0.1)
+	}
+	drop if region == ""
+	mmerge region using `all', type(1:1)
 	drop _merge
-	levelsof region, local(core_list)
-
-	foreach r in `core_list' {
-		preserve
-		keep if region == "`r'"
-		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Base_$date.xlsx", firstrow(varlabels) sheet("Public Release Data") 
-		restore
+	tempfile all
+	save `all', replace
+	
+	* Subgroups
+	foreach s in bhn econ_dis el swd {
+		use `pre', clear
+		keep if `s' == 1
+		collapse (sum) enrolled valid_tests n_*, by(region)
+		foreach v in cr_english cr_math cr_reading cr_science cr_all 21_or_higher below_19 {
+			gen pct_`v' = round(100 * n_`v' / valid_tests, 0.1), after(n_`v')
+		}
+		gen subgroup = "`s'"
+		drop if region == ""
+		tempfile `s'
+		save ``s'', replace 
+		use `temp', clear
+		keep if `s' == 1
+		collapse (mean) composite english math reading science, by(region)
+		foreach v in composite english math reading science {
+			replace `v' = round(`v', 0.1)
+		}
+		drop if region == ""
+		mmerge region using ``s'', type(1:1)
+		drop _merge
+		tempfile `s'
+		save ``s'', replace
 	}
 	
+	use `all', clear
+	append using `bhn'
+	append using `econ_dis'
+	append using `el'
+	append using `swd'
+	replace subgroup = "Black/Hispanic/Native American" if subgroup == "bhn"
+	replace subgroup = "English Learners" if subgroup == "el"
+	replace subgroup = "Economically Disadvantaged" if subgroup == "econ_dis"
+	replace subgroup = "Students with Disabilities" if subgroup == "swd"
+	order region subgroup composite english math reading science, first
 	
-	
-	exit
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	* Numeric
-	import delimited using "$input/$district_numeric", clear
-	rename (bb_percentile_2015 pa_percentile_2015) (bb_percentile_prior pa_percentile_prior)
-	gsort system 
-	levelsof system, local(sys_list)
-	
-	** Output files
-	foreach s in `sys_list' {
-		preserve
-		keep if system == `s'
-		export excel using "$output/District Accountability Files/`s'_DistrictNumericFile_$date.xlsx", replace firstrow(var)
-		restore
-	}
-	
-	
-	
-	
-	
-	
-	
-	exit
-	
-	
-	* Aggregate
-	import delimited using "$input/system_base_2017_JW.csv", clear
-	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk.dta"
-		
-	collapse (sum) enrolled* tested* valid_tests n_* grad_c*, by(year subject grade subgroup region)
-		
-	foreach v in _below_bsc _approach_bsc _ontrack_prof _mastered_adv _21_orhigher _below19 {
-		gen pct`v' = round(100 * n`v' / valid_tests, 0.1) if !inlist(valid_tests, ., 0), after(n`v') 
-	}
-	egen part_num = rowtotal(tested*)
-	egen part_denom = rowtotal(enrolled*)
-	gen grad_rate = round(100 * grad_count / grad_cohort, 0.1) if !inlist(grad_cohort, ., 0), after(grad_count)
-	gen participation_rate = round(100 * part_num / part_denom, 1), after(grad_count)
-		
-	gsort region subject grade subgroup -year
 	levelsof region, local(core_list)
 	foreach r in `core_list' {
 		preserve
 		keep if region == "`r'"
-		export delimited using "`r'_Aggregate.csv", replace 
+		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Aggregate_$date.xlsx", firstrow(var) sheet("ACT")
 		restore
 	}
 }

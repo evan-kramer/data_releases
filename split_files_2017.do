@@ -227,7 +227,8 @@ if `dis' == 1 {
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/District Accountability Files/`s'_DistrictNumericFile_$date.xlsx", replace firstrow(var)
+		*export excel using "$output/District Accountability Files/`s'_DistrictNumericFile_$date.xlsx", replace firstrow(var)
+		export excel using "C:/Users/CA19130/Documents/Projects/Heat Maps/Numeric Files/`s'_DistrictNumericFile_$date.xlsx", replace firstrow(var)
 		restore
 	}
 	

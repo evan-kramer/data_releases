@@ -28,7 +28,7 @@ global heat_map = ""
 global school_release = "school_release_2017_JW_10172017_formatted.xlsx"
 global school_base = "school_base_2017_oct17.csv"
 global school_numeric = "school_numeric_2017_oct17.csv"
-global wida_student = "WIDA_student_level2017_formatted.csv"
+global wida_student = "WIDA_student_level2017.csv"
 global wida_district = ""
 global wida_school = ""
 global chronic_student = "student_chronic_absenteeism.csv"
@@ -42,6 +42,7 @@ local dis = 0
 local sch = 0
 local sca = 0
 local elp = 0
+local gr2 = 0
 local act = 0
 local amo = 0
 local abs = 0
@@ -580,187 +581,140 @@ if `elp' == 1 {
 	!del *.xlsx
 	
 	* District level
+	use "K:/ORP_accountability/data/2017_ELPA/system_level_elpa_JW.dta", clear
+	order system*, first
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "`s'_ACCESSDistrictLevelFile_$date.csv", replace
+		restore
+	}
+	
 	* School level
+	use "K:/ORP_accountability/data/2017_ELPA/school_level_elpa_JW.dta", clear
+	rename schoolnumber school
+	order system* school* subgroup, first
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "`s'_ACCESSSchoolLevelFile_$date.csv", replace
+		restore
+	}
 	
 	* Student level
 	import delimited using "K:/ORP_accountability/projects/Jessica/Data Returns/Data/WIDA/$wida_student", clear
-	la var drcrecordid "DRC Record ID"
-	la var reportedrecord "Reported Record" 
-	la var statenameabbreviation "State Name Abbreviation"
-	la var systemname "System Name"
-	rename systemnumber system 
+	gsort system unique_student_id
+	keep system* school* unique_student_id districtstudentid student*name birthdate gender ///
+		grade cluster* ethnicity* race* datefirst* lengthoftime* titleiii* migrant ///
+		iepstatus *disability *scalescore *ylevel all_s* bhn ell swd met_prof* *lag
+	order system system_name school schoolname unique_student_id districtstudentid /// 
+		student*name birthdate gender grade ethnicity* race* *level prof*lag *scalescore ///
+		scale*lag cluster*, first
+	drop schoolnumber
+	
 	la var system "System Number"
-	la var schoolname "School Name"
-	la var schoolnumber "School Number"
+	la var system_name "System Name" 
+	la var school "School Number" 
+	la var schoolname "School Name" 
+	la var unique_student_id "State ID Number"
+	la var districtstudentid "District ID Number"
 	la var studentlastname "Student Last Name"
-	la var studentfirstname "Student First Name"
-	la var studentmiddlename "Student Middle Name" 
-	la var birthdate "Birth Date"
+	la var studentfirstname "Student First Name" 
+	la var studentmiddlename "Student Middle Name"
+	la var birthdate "DOB"
 	la var gender "Gender" 
-	la var statestudentid "State Student ID"
-	la var districtstudentid "District Student ID"
-	la var grade "Grade"
-	la var clusterlistening "Cluster - Listening" 
-	la var clusterreading "Cluster - Reading"
-	la var clusterspeaking "Cluster - Speaking"
-	la var clusterwriting "Cluster - Writing"
-	la var tierlistening "Tier - Listening"
-	la var tierreading "Tier - Reading"
-	la var tierspeaking "Tier - Speaking"
-	la var tierwriting "Tier - Writing"
-	la var reportedtier "Reported Tier"
-	la var ethnicityhispaniclatino "Ethnicity - Hispanic/Latino"
-	la var raceamericanindianalaskanative "Race - American Indian/Alaska Native"
-	la var raceasian "Race - Asian"
-	la var raceblackafricanamerican "Race - Black/African American"
-	la var racepacificislanderhawaiian "Race - Pacific Islander/Hawaiian"
-	la var racewhite "Race - White"
-	la var nativelanguage "Native Language"
-	la var datefirstenrolledusschool "Date First Enrolled US School"
-	la var lengthoftimeinlepellprogram "Length of Time in LEP/ELL Program"
-	la var titleiiistatus "Title III Status"
-	la var migrant "Migrant"
-	la var iepstatus "IEP Status"
-	la var plan "504 Plan"
-	la var primarydisability "Primary Disability"
-	la var secondarydisability "Secondary Disability"
-	la var liepclassification "LIEP Classification"
-	la var liepparentalrefusal "LIEP - Parental Refusal"
-	la var liepoptionaldata "LIEP - Optional Data"
-	la var mcaccommodation "MC - Accommodation"
-	la var raaccommodation "RA - Accommodation"
-	la var esaccommodation "ES - Accommodation"
-	la var lpaccommodation "LP - Accommodation"
-	la var braccommodation "BR - Accommodation"
-	la var sdaccommodation "SD - Accommodation"
-	la var hraccommodation "HR - Accommodation"
-	la var rraccommodation "RR - Accommodation"
-	la var hiaccommodation "HI - Accommodation"
-	la var riaccommodation "RI - Accommodation"
-	la var sraccommodation "SR - Accommodation"
-	la var wdaccommodation "WD - Accommodation"
-	la var rdaccommodation "RD - Accommodation"
-	la var nsaccommodation "NS - Accommodation"
-	la var etaccommodation "ET - Accommodation"
-	la var emaccommodation "EM - Accommodation"
-	la var statedefinedoptionaldata "State Defined Optional Data"
-	la var districtdefinedoptionaldata "District Defined Optional Data"
-	la var studenttype "Student Type"
-	la var additionalfieldtobeusedbyastatei "Additional field to be used by a state if needed"
-	la var formnumber "Form Number"
-	la var listeningrawitemresponsesgradesk "Listening Raw Item Responses - Grades K-12"
-	la var readingrawitemresponsesgradesk12 "Reading Raw Item Responses - Grades K-12"
-	la var speakingrawitemresponsesgradesk1 "Speaking Raw Item Responses - Grades K-12"
-	la var writingratingtask1grades112 "Writing Rating Task 1 - Grades 1-12"
-	la var writingratingtask2grades112 "Writing Rating Task 2 - Grades 1-12"
-	la var writingratingtask3grades112 "Writing Rating Task 3 - Grades 1-12"
-	la var writingratingtask4grades1tiera "Writing Rating Task 4 - Grades 1 Tier A"
-	la var writingrawresponseskindergarten "Writing Raw Responses - Kindergarten"
-	la var domaintermintationlistening "Domain Termintation - Listening"
-	la var domaintermintationreading "Domain Termintation - Reading"
-	la var domaintermintationspeaking "Domain Termintation - Speaking"
-	la var domaintermintationwriting "Domain Termintation - Writing"
-	la var listeningcomplete "Listening - Complete"
-	la var readingcomplete "Reading - Complete"
-	la var speakingcomplete "Speaking - Complete"
-	la var writingcomplete "Writing - Complete"
-	la var listeningscoredresponsesgradesk1 "Listening Scored Responses - Grades K-12"
-	la var readingscoredresponsesgradesk12 "Reading Scored Responses - Grades K-12"
-	la var speakingscoredresponsesgradesk12 "Speaking Scored Responses - Grades K-12"
-	la var writingscoredresponsestask1grade "Writing Scored Responses - Task 1 (Grades 1-12)"
-	la var writingscoredresponsestask2grade "Writing Scored Responses - Task 2 (Grades 1-12)"
-	la var writingscoredresponsestask3grade "Writing Scored Responses - Task 3 (Grades 1-12)"
-	la var writingscoredresponsestask4grade "Writing Scored Responses - Task 4 (Grade 1 Tier A)"
-	la var writingscoredresponseskindergart "Writing Scored Responses - Kindergarten"
-	la var listeningscalescore "Listening Scale Score"
+	la var grade "Grade" 
+	la var ethnicityhispaniclatino "Ethnicity" 
+	la var raceamericanindianalaskanative "Race - Native American"
+	la var raceasian "Race - Asian" 
+	la var raceblackafricanamerican "Race - Black"
+	la var racepacificislanderhawaiian "Race - Hawaiian or Pacific Islander" 
+	la var racewhite "Race - White" 
+	la var listeningproficiencylevel "Listening Performance Level"
+	la var readingproficiencylevel "Reading Performance Level" 
+	la var speakingproficiencylevel "Speaking Performance Level" 
+	la var writingproficiencylevel "Writing Performance Level" 
+	la var comprehensionproficiencylevel "Comprehension Performance Level" 
+	la var oralproficiencylevel "Oral Performance Level" 
+	la var literacyproficiencylevel "Literacy Performance Level" 
+	la var compositeoverallproficiencylevel "Composite Performance Level" 
+	la var prof_level_composite_lag "Prior Year Composite Performance Level (Rescaled)"
+	la var prof_level_literacy_lag "Prior Year Literacy Performance Level (Rescaled)"
+	la var listeningscalescore "Listening Scale Score" 
 	la var readingscalescore "Reading Scale Score"
 	la var speakingscalescore "Speaking Scale Score"
 	la var writingscalescore "Writing Scale Score"
 	la var comprehensionscalescore "Comprehension Scale Score"
-	la var oralscalescore "Oral Scale Score"
+	la var oralscalescore "Oral Scale Score" 
 	la var literacyscalescore "Literacy Scale Score"
-	la var compositeoverallscalescore "Composite (Overall) Scale Score"
-	la var listeningproficiencylevel "Listening Proficiency Level"
-	la var readingproficiencylevel "Reading Proficiency Level"
-	la var speakingproficiencylevel "Speaking Proficiency Level"
-	la var writingproficiencylevel "Writing Proficiency Level"
-	la var comprehensionproficiencylevel "Comprehension Proficiency Level"
-	la var oralproficiencylevel "Oral Proficiency Level"
-	la var literacyproficiencylevel "Literacy Proficiency Level"
-	la var compositeoverallproficiencylevel "Composite (Overall) Proficiency Level"
-	la var donotscorecodelistening "Do Not Score Code - Listening"
-	la var donotscorecodereading "Do Not Score Code - Reading"
-	la var donotscorecodespeaking "Do Not Score Code - Speaking"
-	la var donotscorecodewriting "Do Not Score Code - Writing"
-	la var listeningconfidencehighscore "Listening Confidence - High Score"
-	la var listeningconfidencelowscore "Listening Confidence - Low Score"
-	la var readingconfidencehighscore "Reading Confidence - High Score"
-	la var readingconfidencelowscore "Reading Confidence - Low Score"
-	la var speakingconfidencehighscore "Speaking Confidence - High Score"
-	la var speakingconfidencelowscore "Speaking Confidence - Low Score"
-	la var writingconfidencehighscore "Writing Confidence - High Score"
-	la var writingconfidencelowscore "Writing Confidence - Low Score"
-	la var comprehensionconfidencehighscore "Comprehension Confidence - High Score"
-	la var comprehensionconfidencelowscore "Comprehension Confidence - Low Score"
-	la var oralconfidencehighscore "Oral Confidence - High Score"
-	la var oralconfidencelowscore "Oral Confidence - Low Score"
-	la var literacyconfidencehighscore "Literacy Confidence - High Score"
-	la var literacyconfidencelowscore "Literacy Confidence - Low Score"
-	la var compositeoverallconfidencehighsc "Composite (Overall) Confidence - High Score"
-	la var compositeoverallconfidencelowsco "Composite (Overall) Confidence - Low Score"
-	la var testcompletiondate "Test Completion Date"
-	la var securitybarcodelistening "Security Barcode - Listening"
-	la var securitybarcodereading "Security Barcode - Reading"
-	la var securitybarcodespeaking "Security Barcode - Speaking"
-	la var securitybarcodewriting "Security Barcode - Writing"
-	la var lithocodelistening "Lithocode - Listening"
-	la var lithocodereading "Lithocode - Reading"
-	la var lithocodespeaking "Lithocode - Speaking"
-	la var lithocodewriting "Lithocode - Writing"
-	la var listeningtesteventid "Listening Test Event ID"
-	la var readingtesteventid "Reading Test Event ID"
-	la var speakingtesteventid "Speaking Test Event ID"
-	la var writingtesteventid "Writing Test Event ID"
-	la var documentlabelcodelistening "Document Label Code - Listening"
-	la var documentlabelcodereading "Document Label Code - Reading"
-	la var documentlabelcodespeaking "Document Label Code - Speaking"
-	la var documentlabelcodewriting "Document Label Code - Writing"
-	la var reportedmode "Reported Mode"
-	la var modeofadministrationlistening "Mode of Administration - Listening"
-	la var modeofadministrationreading "Mode of Administration - Reading"
-	la var modeofadministrationspeaking "Mode of Administration - Speaking"
-	la var modeofadministrationwriting "Mode of Administration - Writing"
-	la var modeofresponsewriting "Mode of Response - Writing"
-	la var onlinelisteningitemids "Online Listening Item IDs"
-	la var onlinereadingitemids "Online Reading Item IDs"
-	la var semlistening "SEM - Listening"
-	la var semreading "SEM - Reading"
-	la var semspeaking "SEM - Speaking"
-	la var semwriting "SEM - Writing"
-	la var semoral "SEM - Oral"
-	la var semliteracy "SEM - Literacy"
-	la var semcomprehension "SEM - Comprehension"
-	la var semoverall "SEM - Overall"
-	la var futureuse1 "Future Use 1"
-	la var futureuse2 "Future Use 2"
-	la var futureuse3 "Future Use 3"
-	la var futureuse4 "Future Use 4"
-	la var datetimestamp "Date/Time Stamp"
-	la var fileuse "File Use"
-	la var priorcompositeperformancelevelne "Prior Composite Performance Level New Standard"
-	la var priorliteracyperformancelevelnew "Prior Literacy Performance Level New Standard"
-	la var priorcompositescalescorenewstand "Prior Composite Scale Score New Standard"
-					
-	* List of distinct systems
+	la var compositeoverallscalescore "Composite Scale Score" 
+	la var scale_score_composite_lag "Prior Year Composite Scale Score (Rescaled)"
+	la var clusterlistening "Listening Cluster"
+	la var clusterreading "Reading Cluster" 
+	la var clusterspeaking "Speaking Cluster" 
+	la var clusterwriting "Writing Cluster"
+	la var datefirstenrolledusschool "Date First Enrolled in US School" 
+	la var lengthoftimeinlepellprogram "Length of Time in ESL Program"
+	la var titleiiistatus "Title III Status" 
+	la var migrant "Migrant"
+	la var iepstatus "IEP Status" 
+	la var primarydisability "Primary Disability" 
+	la var secondarydisability "Secondary Disability" 
+	la var all_students "All Students" 
+	la var bhn "BHN"
+	la var ell "EL"
+	la var swd "SWD" 
+	la var met_proficiency_standard "Met Exit Criteria"
+	
 	levelsof system, local(sys_list)
-
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/ELPA Files/`s'_ACCESSStudentLevelFile_$date.xlsx", replace firstrow(varlabels)
+		export excel using "$output/ELPA Files/`s'_ACCESSStudentLevelFile_3Aug2017.xlsx", replace firstrow(varlabels)
 		restore
 	}
 }
+
+* Grade 2 assessment files
+if  `gr2' == 1 {
+	* Remove all previous files
+	cd "$output/Grade 2 Assessment Files"
+	!del *.csv
+	!del *.xlsx
+	
+	* District
+	use "K:/ORP_accountability/projects/2017_grade_2_assessment/system_level_2017_JW_final_10242017", clear
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "`s'_Grade2DistrictFile_$date.csv", replace
+		restore
+	}
+	
+	* School
+	use "K:/ORP_accountability/projects/2017_grade_2_assessment/school_level_2017_JW_final_10242017", clear
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "`s'_Grade2SchoolFile_$date.csv", replace
+		restore
+	}
+	
+	* Student
+	use "K:/ORP_accountability/projects/2017_grade_2_assessment/state_student_level_2017_JW_final_10242017", clear
+	levelsof system, local(sys_list)
+	foreach s in `sys_list' {
+		preserve
+		keep if system == `s'
+		export delimited using "`s'_Grade2StudentFile_$date.csv", replace
+		restore
+	}
+}
+
 * ACT files
 if `act' == 1 {
 	* Remove all previous files

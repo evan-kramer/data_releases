@@ -51,7 +51,150 @@ local cor = 0
 local che = 0
 local err = 0
 local van = 0
+local hen = 0
+local asd = 1
 
+* ASD school split
+if `asd' == 1 {
+	cd "J:\WEBPAGES\NCLBAppeals\Accountability Web Files"
+	* Data summary, Focus exit/improving, Priority exit/improving, School accountability file
+	foreach f in DataSummary FocusExitImprove PriorityExitImprove SchoolAccountabilityFile {
+		import delimited using "985_`f'_18Oct2017.csv", clear
+		levelsof school, local(sch_list)
+		foreach s in `sch_list' {
+			preserve
+			keep if school == `s'
+			export delimited using "K:/ORP_accountability/projects/Evan/Data Releases/ASD School Split/985_`s'_`f'_$date.csv", replace
+			restore
+		}
+	}
+	
+	* Reward file, school base file
+	foreach f in RewardFile {
+		import delimited using "985_`f'_19Oct2017.csv", clear
+		levelsof school, local(sch_list)
+		foreach s in `sch_list' {
+			preserve
+			keep if school == `s'
+			export delimited using "K:/ORP_accountability/projects/Evan/Data Releases/ASD School Split/985_`s'_`f'_$date.csv", replace
+			restore
+		}
+	}
+	
+	* School AMO
+	foreach sh in "Accountability Targets" "Subject Targets | Planning Only" {
+		import excel using "985_SchoolLevelAMO_15Nov2017.xlsx", firstrow clear sheet("`sh'")
+		levelsof school, local(sch_list)
+		foreach s in `sch_list' {
+			preserve
+			keep if school == `s'
+			export excel using "K:/ORP_accountability/projects/Evan/Data Releases/ASD School Split/985_`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("`sh'", replace)
+			restore
+		}
+	}
+	
+	* School base file
+	foreach sh in "Sheet1" "Public Release Data" {		
+		import excel using "985_SchoolBaseFile_19Oct2017.xlsx", firstrow clear sheet("`sh'")
+		levelsof school, local(sch_list)
+		foreach s in `sch_list' {
+			preserve
+			keep if school == `s'
+			export excel using "K:/ORP_accountability/projects/Evan/Data Releases/ASD School Split/985_`s'_SchoolBaseFile_$date.xlsx", firstrow(var) sheet("`sh'", replace)
+			restore
+		}
+	}
+			
+	* Student level file
+	foreach f in StudentLevelFiles {
+		import delimited using "985_`f'_12Oct2017.csv", clear
+		levelsof school, local(sch_list)
+		foreach s in `sch_list' {
+			preserve
+			keep if school == `s'
+			export delimited using "K:/ORP_accountability/projects/Evan/Data Releases/ASD School Split/985_`s'_`f'_$date.csv", replace
+			restore
+		}
+	}
+	
+	* School numeric file
+	foreach f in SchoolNumericFile {
+		import excel using "985_`f'_12Oct2017.xlsx", clear firstrow
+		levelsof school, local(sch_list)
+		foreach s in `sch_list' {
+			preserve
+			keep if school == `s'
+			export delimited using "K:/ORP_accountability/projects/Evan/Data Releases/ASD School Split/985_`s'_`f'_$date.csv", replace
+			restore
+		}
+	}
+	
+	* Grade 2 student, Grade 2 school, ELPA school
+	foreach f in Grade2StudentFile Grade2SchoolFile ACCESSSchoolLevelFile {
+		import delimited using "985_`f'_26Oct2017.csv", clear 
+		levelsof school, local(sch_list)
+		foreach s in `sch_list' {
+			preserve
+			keep if school == `s'
+			export delimited using "K:/ORP_accountability/projects/Evan/Data Releases/ASD School Split/985_`s'_`f'_$date.csv", replace
+			restore
+		}
+	}
+	
+	* ELPA student level
+	foreach f in ACCESSStudentLevelFile {
+		import excel using "985_`f'_3Aug2017.xlsx", clear firstrow
+		levelsof SchoolNumber, local(sch_list)
+		foreach s in `sch_list' {
+			preserve
+			keep if SchoolNumber == `s'
+			export delimited using "K:/ORP_accountability/projects/Evan/Data Releases/ASD School Split/985_`s'_`f'_$date.csv", replace
+			restore
+		}
+	}
+}
+
+* Henry County attendance errors
+if `hen' == 1 {
+	* Chronic absence files
+	** Remove all previous files
+	cd "$output/Chronic Absenteeism Files"
+	!del 400*.csv
+	cd "J:\WEBPAGES\NCLBAppeals\Accountability Web Files"
+	!del 400_Chronic*.csv
+	
+	** District level
+	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_district", clear
+	replace grade_band = "9th through 12th" if grade_band == "9-12"
+	replace grade_band = "K through 8th" if grade_band == "K-8"
+	preserve
+	local s = 400
+	keep if system == `s'
+	export delimited using "$output/Chronic Absenteeism Files/`s'_ChronicAbsenteeismDistrictFile_$date.csv", replace
+	export delimited using "J:\WEBPAGES\NCLBAppeals\Accountability Web Files/`s'_ChronicAbsenteeismDistrictFile_$date.csv", replace
+	restore
+	
+	** School level
+	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_school", clear
+	keep if grade_band == "All Grades"
+	preserve
+	local s = 400
+	keep if system == `s' 
+	export delimited using "$output/Chronic Absenteeism Files/`s'_ChronicAbsenteeismSchoolFile_$date.csv", replace
+	export delimited using "J:\WEBPAGES\NCLBAppeals\Accountability Web Files/`s'_ChronicAbsenteeismSchoolFile_$date.csv", replace
+	restore
+		
+	** Student level
+	import delimited using "K:/ORP_accountability/data/2017_chronic_absenteeism/$chronic_student", clear
+	rename (isp_days instructional_calendar_days) (student_enrolled_days school_instructional_days)
+	destring absentee_rate, force replace
+	preserve
+	local s = 400
+	keep if system == `s'
+	export delimited using "$output/Chronic Absenteeism Files/`s'_ChronicAbsenteeismStudentFile_$date.csv", replace
+	export delimited using "J:\WEBPAGES\NCLBAppeals\Accountability Web Files/`s'_ChronicAbsenteeismStudentFile_$date.csv", replace
+	restore
+}
 * Van Buren 60% errors and Bartlett
 if `van' == 1 {
 	* Student level
@@ -764,11 +907,10 @@ if `act' == 1 {
 * AMO files
 if `amo' == 1 {
 	* Remove all previous files
-	*cd "$output/AMO Files"
-	*!del *.csv
-	*!del *.xlsx
+	cd "$output/AMO Files"
+	!del *AMO*
 	cd "J:\WEBPAGES\NCLBAppeals\Accountability Web Files"
-	!del 880*AMO*
+	!del *AMO*
 	
 	* District level
 	** Accountability targets
@@ -805,11 +947,10 @@ if `amo' == 1 {
 		n_met_growth pct_met_growth n_students n_chronically_absent pct_chronically_absent, first
 		
 	levelsof system, local(sys_list)
-	*foreach s in `sys_list' {
-	foreach s in 541 880 {
+	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		*export excel using "$output/AMO Files/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
+		export excel using "$output/AMO Files/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
 		export excel using "$app/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets")
 		restore
 	}
@@ -819,11 +960,10 @@ if `amo' == 1 {
 	rename amo_target_4 double_amo_target
 	order year system system_name subject grade subgroup amo_target double_amo_target subgroup valid_tests, first
 	levelsof system, local(sys_list)
-	*foreach s in `sys_list' {
-	foreach s in 541 880 {
+	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		*export excel using "$output/AMO Files/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
+		export excel using "$output/AMO Files/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
 		export excel using "$app/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
 		restore
 	}
@@ -874,11 +1014,10 @@ if `amo' == 1 {
 		n_chronically_absent pct_chronically_absent, first
 	
 	levelsof system, local(sys_list)
-	*foreach s in `sys_list' {
-	foreach s in 541 880 {
+	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		*export excel using "$output/AMO Files/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
+		export excel using "$output/AMO Files/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
 		export excel using "$app/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
 		restore
 	}
@@ -902,11 +1041,10 @@ if `amo' == 1 {
 		valid_tests_prior pct_on_mastered_prior, first
 	
 	levelsof system, local(sys_list)
-	*foreach s in `sys_list' {
-	foreach s in 541 880 {
+	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		*export excel using "$output/AMO Files/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
+		export excel using "$output/AMO Files/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
 		export excel using "$app/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
 		restore
 	}

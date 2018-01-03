@@ -52,7 +52,7 @@ local che = 0
 local err = 0
 local van = 0
 local hen = 0
-local asd = 1
+local asd = 0
 
 * ASD school split
 if `asd' == 1 {
@@ -861,9 +861,10 @@ if  `gr2' == 1 {
 * ACT files
 if `act' == 1 {
 	* Remove all previous files
-	cd "$output/ACT Files"
-	!del *ACT_*.csv
+	cd "J:\WEBPAGES\NCLBAppeals\Accountability Web Files"
+	!del *LevelACT_*.csv
 	
+	/*
 	* ACT substitution student level files
 	import delimited using "$input/$act_sub_student_level", clear
 	levelsof system, local(sys_list)
@@ -874,29 +875,32 @@ if `act' == 1 {
 		export delimited using "$output/ACT Files/`s'_ACTSubstitutionStudentLevelFile_$date.csv", replace
 		restore
 	}
+	*/
 	
 	* District and school level
 	foreach l in district school {
 		local m = strproper("`l'")
-		use "K:/ORP_accountability/data/2017_ACT/ACT_`m'2018.dta", clear
+		use "K:/ORP_accountability/data/2017_ACT/ACT_`m'2018_appeals.dta", clear
+		destring system, replace
 		levelsof system, local(sys_list)
 		
 		foreach s in `sys_list' {
 			preserve
 			keep if system == `s'
-			export delimited using "$output/ACT Files/`s'_`m'LevelACT_$date.csv", replace
+			export delimited using "`s'_`m'LevelACT_$date.csv", replace
 			restore
 		}
 	}
 	
 	* Student level
-	use "K:/ORP_accountability/data/2017_ACT/2018_ACT_student_level_actcohorthighest.dta", clear
+	use "K:/ORP_accountability/data/2017_ACT/2018_ACT_student_level_actcohorthighest_appeals.dta", clear
+	destring system, replace
 	levelsof system, local(sys_list)
 	
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export delimited using "$output/ACT Files/`s'_StudentLevelACT_$date.csv", replace
+		export delimited using "`s'_StudentLevelACT_$date.csv", replace
 		restore
 	}
 	

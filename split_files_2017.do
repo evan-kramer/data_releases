@@ -9,7 +9,7 @@ estimates drop _all
 /*
 Split Files 
 Evan Kramer
-10/24/2017
+1/16/2018
 */
 
 * Define macros
@@ -911,8 +911,6 @@ if `act' == 1 {
 * AMO files
 if `amo' == 1 {
 	* Remove all previous files
-	cd "$output/AMO Files"
-	!del *AMO*
 	cd "J:\WEBPAGES\NCLBAppeals\Accountability Web Files"
 	!del *AMO*
 	
@@ -954,7 +952,6 @@ if `amo' == 1 {
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/AMO Files/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
 		export excel using "$app/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets")
 		restore
 	}
@@ -967,7 +964,6 @@ if `amo' == 1 {
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/AMO Files/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
 		export excel using "$app/`s'_DistrictLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
 		restore
 	}
@@ -1021,7 +1017,6 @@ if `amo' == 1 {
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/AMO Files/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
 		export excel using "$app/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Accountability Targets") 
 		restore
 	}
@@ -1048,7 +1043,6 @@ if `amo' == 1 {
 	foreach s in `sys_list' {
 		preserve
 		keep if system == `s'
-		export excel using "$output/AMO Files/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
 		export excel using "$app/`s'_SchoolLevelAMO_$date.xlsx", firstrow(var) sheet("Subject Targets | Planning Only")
 		restore
 	}
@@ -1114,7 +1108,7 @@ if `cor' == 1 {
 	* Base and numeric
 	foreach l in base numeric {
 		local m = strproper("`l'")
-		import delimited using "$input/system_`l'_2017_oct11.csv", clear
+		import delimited using "$input/system_`l'_2017_oct17.csv", clear
 		mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
 		collapse (sum) valid_tests n_* grad_c* dropout_count, by(year region subject grade subgroup)
 		foreach v in below approaching on_track mastered {
@@ -1136,7 +1130,8 @@ if `cor' == 1 {
 	}	
 	
 	* ACT
-	import delimited using "K:/ORP_accountability/data/2017_ACT/act_student_level_with_demographics_EK.csv", clear
+	use "K:/ORP_accountability/data/2017_ACT/2018_ACT_student_level_actcohorthighest_appeals", clear
+	destring system, replace
 	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
 	
 	gen bhn = inlist(race_ethnicity, "B", "H", "I")
@@ -1148,26 +1143,29 @@ if `cor' == 1 {
 	save `temp', replace
 	
 	gen enrolled = 1
-	gen valid_tests = composite != . 
-	gen n_21_or_higher = valid_tests == 1 & composite >= 21
-	gen n_below_19 = valid_tests == 1 & composite < 19
+	replace valid_tests = act_composite_highest != . 
+	gen n_21_or_higher = valid_tests == 1 & act_composite_highest >= 21
+	gen n_below_19 = valid_tests == 1 & act_composite_highest < 19
 	tempfile pre 
 	save `pre', replace
 	
 	* All
 	use `pre', clear
-	collapse (sum) enrolled valid_tests n_*, by(region)
-	foreach v in cr_english cr_math cr_reading cr_science cr_all 21_or_higher below_19 {
-		gen pct_`v' = round(100 * n_`v' / valid_tests, 0.1), after(n_`v')
+	collapse (sum) enrolled valid_tests n_* met_*, by(region)
+	foreach v in CRB_english CRB_math CRB_reading CRB_science All4_CRB {
+		gen pct_met_`v' = round(100 * met_`v' / valid_tests, 0.1), after(met_`v')
+	}
+	foreach v in 21_or_higher below_19 {
+		gen pct_`v' = round(100 & n_`v' / valid_tests, 0.1), after(n_`v')
 	}
 	gen subgroup = "All Students", after(region)
 	drop if region == ""
 	tempfile all
 	save `all', replace
 	use `temp', clear
-	collapse (mean) composite english math reading science, by(region)
+	collapse (mean) *_highest, by(region)
 	foreach v in composite english math reading science {
-		replace `v' = round(`v', 0.1)
+		replace act_`v'_highest = round(act_`v'_highest, 0.1)
 	}
 	drop if region == ""
 	mmerge region using `all', type(1:1)
@@ -1179,9 +1177,12 @@ if `cor' == 1 {
 	foreach s in bhn econ_dis el swd {
 		use `pre', clear
 		keep if `s' == 1
-		collapse (sum) enrolled valid_tests n_*, by(region)
-		foreach v in cr_english cr_math cr_reading cr_science cr_all 21_or_higher below_19 {
-			gen pct_`v' = round(100 * n_`v' / valid_tests, 0.1), after(n_`v')
+		collapse (sum) enrolled valid_tests n_* met_*, by(region)
+		foreach v in CRB_english CRB_math CRB_reading CRB_science All4_CRB {
+			gen pct_met_`v' = round(100 * met_`v' / valid_tests, 0.1), after(met_`v')
+		}
+		foreach v in 21_or_higher below_19 {
+			gen pct_`v' = round(100 & n_`v' / valid_tests, 0.1), after(n_`v')
 		}
 		gen subgroup = "`s'"
 		drop if region == ""
@@ -1189,9 +1190,9 @@ if `cor' == 1 {
 		save ``s'', replace 
 		use `temp', clear
 		keep if `s' == 1
-		collapse (mean) composite english math reading science, by(region)
+		collapse (mean) *_highest, by(region)
 		foreach v in composite english math reading science {
-			replace `v' = round(`v', 0.1)
+			replace act_`v'_highest = round(act_`v'_highest, 0.1)
 		}
 		drop if region == ""
 		mmerge region using ``s'', type(1:1)
@@ -1209,13 +1210,69 @@ if `cor' == 1 {
 	replace subgroup = "English Learners" if subgroup == "el"
 	replace subgroup = "Economically Disadvantaged" if subgroup == "econ_dis"
 	replace subgroup = "Students with Disabilities" if subgroup == "swd"
-	order region subgroup composite english math reading science, first
+	order region subgroup *_highest, first
 	
 	levelsof region, local(core_list)
 	foreach r in `core_list' {
 		preserve
 		keep if region == "`r'"
 		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Aggregate_$date.xlsx", firstrow(var) sheet("ACT")
+		restore
+	}
+	
+	* Grade 2
+	use "K:/ORP_accountability/projects/2017_grade_2_assessment/system_level_2017_JW_final_10242017", clear
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
+	collapse (sum) valid_tests n_*, by(year region subject subgroup)
+	foreach v in below_bsc approach_bsc ontrack_prof mastered_adv {
+		gen pct_`v' = round(100 * n_`v' / valid_tests, 0.1) if valid_tests >= 10 & valid_tests != ., after(n_`v')
+	}
+	gen pct_on_mastered = round(100 * (n_ontrack_prof + n_mastered_adv) / valid_tests, 0.1) if valid_tests >= 10 & valid_tests !=., after(pct_mastered)
+	gsort -year subject subgroup
+	
+	levelsof region, local(core_list)
+	foreach r in `core_list' {
+		preserve
+		keep if region == "`r'"
+		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Aggregate_$date.xlsx", firstrow(var) sheet("Grade 2")
+		restore
+	}
+	
+	* All files by region
+	** Base
+	import delimited using "$input/system_base_2017_oct17.csv", clear
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
+	drop analyst email director _merge
+	levelsof region, local(core_list)
+	foreach r in `core_list' {
+		preserve
+		keep if region == "`r'"
+		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Comprehensive_$date.xlsx", firstrow(var) sheet("Base")
+		restore
+	}
+	
+	** ACT
+	use "K:/ORP_accountability/data/2017_ACT/ACT_district2018_appeals", clear
+	destring system, replace
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
+	drop analyst email director _merge
+	levelsof region, local(core_list)
+	foreach r in `core_list' {
+		preserve
+		keep if region == "`r'"
+		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Comprehensive_$date.xlsx", firstrow(var) sheet("ACT")
+		restore
+	}
+	
+	** Grade 2
+	use "K:/ORP_accountability/projects/2017_grade_2_assessment/system_level_2017_JW_final_10242017", clear
+	mmerge system using "C:/Users/CA19130/Documents/Data/Crosswalks/core_region_crosswalk", type(n:1)
+	drop analyst email director _merge
+	levelsof region, local(core_list)
+	foreach r in `core_list' {
+		preserve
+		keep if region == "`r'"
+		export excel using "K:/ORP_accountability/projects/Evan/Data Releases/`r'_Comprehensive_$date.xlsx", firstrow(var) sheet("Grade 2")
 		restore
 	}
 }
